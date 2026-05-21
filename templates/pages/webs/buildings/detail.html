@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load rest_framework %}
+{% block content %}
+<div class="max-w-7xl mx-auto bg-white p-6 rounded shadow">
+    <h2 class="text-2xl font-semibold mb-4">Building Details</h2>
+    {% if error %}
+        <div class="text-red-500 mb-4 text-sm">
+            {% for field, messages in error.items %}
+                <p><strong>{{ field|title }}:</strong> {{ messages.0 }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        {% render_form serializer %}
+        <div class="flex space-x-4 pt-4">
+            <button name="update" value="1" type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Update</button>
+            <button name="delete" value="1" type="submit" class="bg-red-600 text-white px-4 py-2 rounded" style="background-color: rgb(220 38 38);">Delete</button>
+            <a href="{% url 'buildings-dashboard' %}" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Back</a>
+        </div>
+        <div class="flex space-x-4 pt-4">
+            <a href="{% url 'add-elevator-for-building' building.id %}" class="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Add Elevator</a>
+        </div>
+    </form>
+    <div class="mt-8">
+        <h3 class="text-xl font-semibold mt-10 mb-4">Elevators Installed</h3>
+        <table class="datatable min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr class="bg-gray-100 text-left">
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stops</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registered</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for elevator in elevators %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <a href="{% url 'elevator-detail-page' elevator.id %}" class="text-gray-800 hover:underline">
+                            {{ elevator.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.model }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.number_of_stops }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.registered|date:"Y-m-d" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.started|date:"Y-m-d" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.total }} ETB</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {% for s in elevator.status %}
+                            <span class="inline-block px-2 py-1 rounded text-xs font-semibold
+                                {% if 'Under Warranty' in s %} bg-blue-100 text-blue-800
+                                {% elif 'Warranty Expired' in s %} bg-yellow-100 text-yellow-800
+                                {% elif 'Under Contract' in s %} bg-green-100 text-green-800
+                                {% elif 'Contract Expired' in s %} bg-red-100 text-red-800
+                                {% else %} bg-gray-100 text-gray-800 {% endif %}
+                            ">
+                                {{ s }}
+                            </span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="max-w-7xl mx-auto mt-8 mb-4 bg-white p-6 rounded-lg shadow">
+      <h2 class="text-2xl font-semibold mb-4">Create New Contract</h2>
+      <form action="{% url 'contract-list' %}" method="post">
+        {% csrf_token %}
+        {# where to go back after create #}
+
+        <div class="grid gap-4 md:grid-cols-3">
+            <input type="hidden" name="next" value="{{ contract_create_next }}#contract">
+            <input type="hidden" name="building" value="{{ building.id }}">
+            {% render_form contract_form %}
+        </div>
+
+        <div class="flex justify-end mt-6">
+          <button
+            type="submit"
+            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow"
+          >
+            Save Contract
+          </button>
+        </div>
+      </form>
+    </div>
+    <div class="mt-12">
+        <h2 class="text-2xl font-semibold mb-4">Contracts Available for this building</h2>
+        <table class="datatable min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr class="bg-gray-100 text-left">
+              <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+              <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+              <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+              <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Pay Time</th>
+              <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Pay Status</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for row in contracts_with_payment %}
+            {% with contract=row.contract %}
+            <tr>
+              <td class="px-6 py-4">{{ contract.id }}</td>
+              <td class="px-6 py-4">{{ contract.start_date|date:"Y-m-d" }}</td>
+              <td class="px-6 py-4">{{ contract.end_date|date:"Y-m-d" }}</td>
+              <td class="px-6 py-4">{{ contract.paytime }}</td>
+              <td class="px-6 py-4">
+                  <form method="get" action="{% url 'contract-update-payment-status' %}">
+                    <input type="hidden" name="contract_id" value="{{ contract.id }}">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <select name="status" class="border border-gray-300 rounded-md p-1 text-sm">
+                      <option value="1" {% if contract.payed == 1 %}selected{% endif %} {% if not row.can_mark_not_paid %}disabled{% endif %}>Not Paid</option>
+                      <option value="2" {% if contract.payed == 2 %}selected{% endif %} {% if not row.can_mark_fully_paid %}disabled{% endif %}>Full Paid</option>
+                      <option value="3" {% if contract.payed == 3 %}selected{% endif %} {% if not row.can_mark_partial_paid %}disabled{% endif %}>Partial Paid</option>
+                    </select>
+                    <button type="submit" class="ml-2 text-white bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 rounded-md">Update</button>
+                  </form>
+                  {% if row.payment_totals.balance_due > 0.01 %}
+                  <p class="text-[10px] text-amber-700 mt-1">Due: ETB {{ row.payment_totals.balance_due|floatformat:2 }}</p>
+                  {% endif %}
+              </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

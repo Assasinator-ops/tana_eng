@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white shadow-md rounded-lg p-6">
+  <h2 class="text-xl font-semibold mb-4">Add Building for Owner: {{ owner.name }}</h2>
+  <form id="building-form" class="space-y-4">
+    {% csrf_token %}
+    <input type="text" name="name" placeholder="Building Name" class="w-full border rounded p-2" required />
+    <textarea name="address" placeholder="Address" class="w-full border rounded p-2" required></textarea>
+    <input type="text" name="phone1" placeholder="Phone 1" class="w-full border rounded p-2" required />
+    <input type="text" name="phone2" placeholder="Phone 2" class="w-full border rounded p-2" />
+    <input type="text" name="phone3" placeholder="Phone 3" class="w-full border rounded p-2" />
+    <input type="email" name="email1" placeholder="Email 1" class="w-full border rounded p-2" required />
+    <input type="email" name="email2" placeholder="Email 2" class="w-full border rounded p-2" />
+    <input type="text" name="rep_name" placeholder="Representative Name" class="w-full border rounded p-2" />
+    <input type="text" name="rep_phone" placeholder="Representative Phone" class="w-full border rounded p-2" />
+    <div class="flex space-x-4 pt-4">
+      <button type="button" onclick="submitBuildingForm()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Create Building</button>
+      <a href="{% url 'owner-detail-page' owner.id %}" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      document.cookie.split(';').forEach(cookie => {
+        const [key, val] = cookie.trim().split('=');
+        if (key === name) cookieValue = decodeURIComponent(val);
+      });
+    }
+    return cookieValue;
+  }
+
+  function submitBuildingForm() {
+    const form = document.getElementById('building-form');
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach((value, key) => {
+      data[key] = value;
+    });
+
+    fetch("", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify(data)
+    })
+    .then(res => {
+      if (!res.ok) return res.json().then(err => { throw err; });
+      return res.json();
+    })
+    .then(json => {
+      alert("Building added!");
+      window.location.href = `{% url 'owner-detail-page' owner.id %}`;
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error: " + JSON.stringify(err));
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,69 @@
+/* Utility additions beyond the core 'tailwind-like' bundle */
+.container{width:100%;margin-inline:auto;padding-inline:1rem}
+@media (min-width:640px){.container{max-width:640px}}
+@media (min-width:768px){.container{max-width:768px}}
+@media (min-width:1024px){.container{max-width:1024px}}
+@media (min-width:1280px){.container{max-width:1280px}}
+@media (min-width:1536px){.container{max-width:1536px}}
+
+/* Dark variants via .dark parent */
+.dark .dark\:bg-gray-900{background:#111827}
+.dark .dark\:text-gray-100{color:#f3f4f6}
+.dark .dark\:border-gray-700{border-color:#374151}
+
+/* Hover/Focus variants (common subset) */
+.hover\:underline:hover{text-decoration:underline}
+.hover\:opacity-80:hover{opacity:.8}
+.focus\:ring:focus{box-shadow:var(--ring)}
+
+/* Aspect ratio helper */
+.ratio{position:relative;width:100%}
+.ratio > *{position:absolute;inset:0}
+.ratio-16\/9{padding-top:56.25%}
+.ratio-1\/1{padding-top:100%}
+
+/* Container queries (basic) */
+@container (min-width: 480px){.cq\:text-lg{font-size:1.125rem}}
+
+/* === Expanded Utilities & Animations === */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+@keyframes pulse{50%{opacity:.5}}
+@keyframes bounce{0%,100%{transform:translateY(-25%)}50%{transform:none}}
+.animate-spin{animation:spin 1s linear infinite}
+.animate-ping{animation:ping 1s cubic-bezier(0,0,.2,1) infinite}
+.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}
+.animate-bounce{animation:bounce 1s infinite}
+
+.gradient-to-r{background-image:linear-gradient(to right,var(--grad-from,#3b82f6),var(--grad-to,#8b5cf6))}
+.gradient-to-b{background-image:linear-gradient(to bottom,var(--grad-from,#3b82f6),var(--grad-to,#22c55e))}
+.from-primary{--grad-from:#3b82f6}.to-secondary{--grad-to:#8b5cf6}.to-accent{--grad-to:#22c55e}
+
+.backdrop-blur{backdrop-filter:blur(8px)}
+.backdrop-blur-md{backdrop-filter:blur(12px)}
+
+.filter{filter:var(--fx)}.blur{--fx:blur(4px)}.grayscale{--fx:grayscale(1)}.sepia{--fx:sepia(1)}
+
+.transition-none{transition:none}
+.ease-in{transition-timing-function:cubic-bezier(.4,0,1,1)}
+.ease-out{transition-timing-function:cubic-bezier(0,0,.2,1)}
+.ease-in-out{transition-timing-function:cubic-bezier(.4,0,.2,1)}
+
+.shadow-xl{box-shadow:0 20px 25px rgba(0,0,0,.1), 0 10px 10px rgba(0,0,0,.04)}
+ring-2{box-shadow:0 0 0 2px rgba(59,130,246,.5)}
+
+.sticky-top{position:sticky;top:0}
+.sticky-bottom{position:sticky;bottom:0}
+
+.cursor-pointer{cursor:pointer}.cursor-move{cursor:move}.cursor-not-allowed{cursor:not-allowed}
+.select-text{-webkit-user-select:text;user-select:text}
+
+@media (hover:hover){
+  .hover\:bg-gray-100:hover{background:#f3f4f6}
+  .hover\:shadow-lg:hover{box-shadow:0 10px 15px rgba(0,0,0,.1)}
+  .hover\:scale-105:hover{transform:scale(1.05)}
+}
+.focus\:outline-none:focus{outline:none}
+.active\:opacity-60:active{opacity:.6}
+.disabled\:opacity-40:disabled{opacity:.4}
+/* -- end -- */

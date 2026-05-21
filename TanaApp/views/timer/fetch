@@ -1,0 +1,11 @@
+# Create timer
+POST /api/timers/
+{
+    "status": 1,
+    "payment_time": 30,
+    "elevator": "ELEV-123",
+    "building": 5
+}
+
+# Get all timers for building 5
+GET /api/timers/building/5/

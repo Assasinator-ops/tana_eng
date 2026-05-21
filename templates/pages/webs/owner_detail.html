@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="max-w-7xl mx-auto bg-white shadow-md rounded-lg p-6">
+    <h1 class="text-2xl font-semibold mb-4">Owner #{{ owner.id }}</h1>
+    <form id="owner-form" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Name</label>
+        <input type="text" id="name" value="{{ owner.name }}" class="mt-1 block w-full border-gray-300 rounded-md" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Email</label>
+        <input type="email" id="email" value="{{ owner.email }}" class="mt-1 block w-full border-gray-300 rounded-md" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Phone 1</label>
+        <input type="text" id="phone1" value="{{ owner.phone1 }}" class="mt-1 block w-full border-gray-300 rounded-md" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Phone 2</label>
+        <input type="text" id="phone2" value="{{ owner.phone2|default:'' }}" class="mt-1 block w-full border-gray-300 rounded-md" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Address</label>
+        <textarea id="address" class="mt-1 block w-full border-gray-300 rounded-md">{{ owner.address }}</textarea>
+      </div>
+      <div class="flex space-x-4 pt-4">
+        <button type="button" onclick="submitForm('update')" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Update</button>
+        <button type="button" onclick="submitForm('delete')" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Delete</button>
+        <a href="{% url 'owner-list' %}" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Back</a>
+      </div>
+      <div class="flex space-x-4 pt-4">
+        <a href="{% url 'add-building-for-owner' owner.id %}" class="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Add Building</a>
+      </div>
+    </form>
+    <div class="mt-8">
+      <h2 class="text-xl font-bold mt-8 mb-2">Buildings Owned</h2>
+      <table class="datatable min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr class="bg-gray-100 text-left">
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for building in building_list %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.id }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><a href="{% url 'buildings-detail-page' building.id %}" class="text-gray-800 hover:underline">{{ building.name }}</a></td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.phone1 }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.email1 }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.address }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(cookie => {
+          const [key, val] = cookie.trim().split('=');
+          if (key === name) cookieValue = decodeURIComponent(val);
+        });
+      }
+      return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+    const endpoint = "{% url 'owner-detail' owner.id %}";
+
+    function submitForm(actionType) {
+      if (actionType === 'delete' && !confirm('Delete this owner?')) return;
+      const data = {
+        action: actionType,
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        phone1: document.getElementById('phone1').value,
+        phone2: document.getElementById('phone2').value,
+        address: document.getElementById('address').value
+      };
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(data)
+      })
+      .then(resp => {
+        if (!resp.ok) return resp.json().then(err => { throw err.detail || 'Error'; });
+        if (actionType === 'delete') window.location.href = "{% url 'owner-list' %}";
+        else return resp.json();
+      })
+      .then(json => {
+        if (actionType === 'update') {
+          alert('Owner updated successfully');
+          location.reload();
+        }
+      })
+      .catch(err => alert(`Error: ${err}`));
+    }
+  </script>
+{% endblock %}

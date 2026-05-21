@@ -1,0 +1,875 @@
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-semibold text-gray-800">
+      Manage Contract #{{ contract_id }}
+    </h1>
+    <button
+      @click="printReceipt()"
+      class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow"
+      :disabled="!summary"
+      :class="{'opacity-50 cursor-not-allowed': !summary}"
+    >
+      Print Receipt
+    </button>
+  </div>
+
+  <!-- Status Messages -->
+  <div x-show="errorMessage" x-transition class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
+    <p x-text="errorMessage"></p>
+  </div>
+
+  <div x-show="successMessage" x-transition class="mb-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-700">
+    <p x-text="successMessage"></p>
+  </div>
+
+  <!-- 1) CONTRACT OVERVIEW -->
+  <div class="bg-white p-6 shadow rounded-lg mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-4">Contract Overview</h2>
+    <div class="space-y-2 text-sm text-gray-700">
+      <template x-if="loading.overview">
+        <div class="flex items-center space-x-2">
+          <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Loading contract details...</span>
+        </div>
+      </template>
+      <template x-if="!loading.overview && overview">
+        <div x-html="overviewHTML"></div>
+      </template>
+      <template x-if="!loading.overview && !overview">
+        <p class="text-gray-500">No contract information available.</p>
+      </template>
+    </div>
+  </div>
+
+  <!-- 2) PAYMENT SUMMARY -->
+  <div class="bg-white p-6 shadow rounded-lg mb-6">
+    <h2 class="text-lg font-bold text-indigo-700 mb-4">Payment Summary</h2>
+
+    <template x-if="loading.summary">
+      <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <span>Loading payment summary...</span>
+      </div>
+    </template>
+
+    <template x-if="!loading.summary && summary">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2 text-left">Description</th>
+            <th class="px-4 py-2 text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <!-- Base Contract -->
+          <tr>
+            <td class="px-4 py-2">Base Contract</td>
+            <td class="px-4 py-2 text-right" x-text="fmt(summary.base_amount)"></td>
+          </tr>
+
+          <!-- Partial Payment -->
+          <template x-if="partial">
+            <tr>
+              <td class="px-4 py-2">Partial Paid</td>
+              <td class="px-4 py-2 text-right text-red-600" x-text="`-${fmt(partial.amount)}`"></td>
+            </tr>
+          </template>
+
+          <!-- Extras -->
+          <template x-if="extras.length > 0">
+            <template x-for="e in extras" :key="e.id">
+              <tr>
+                <td class="px-4 py-2">Extra – <span x-text="e.description"></span></td>
+                <td class="px-4 py-2 text-right text-green-600" x-text="`+${fmt(e.money)}`"></td>
+              </tr>
+            </template>
+          </template>
+
+          <!-- Discounts -->
+          <template x-if="discounts.length > 0">
+            <template x-for="d in discounts" :key="d.id">
+              <tr>
+                <td class="px-4 py-2">Discount – <span x-text="d.description"></span></td>
+                <td class="px-4 py-2 text-right text-red-600" x-text="`-${fmt(d.discount_money)}`"></td>
+              </tr>
+            </template>
+          </template>
+
+          <!-- Net Total -->
+          <tr class="bg-gray-50 font-semibold">
+            <td class="px-4 py-2">NET TOTAL</td>
+            <td class="px-4 py-2 text-right" x-text="fmt(summary.net_total)"></td>
+          </tr>
+        </tbody>
+      </table>
+    </template>
+
+    <template x-if="!loading.summary && !summary">
+      <p class="text-gray-500">No payment summary available.</p>
+    </template>
+  </div>
+
+  <!-- 3) EXTRAS & DISCOUNTS SECTIONS -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Extras Card -->
+    <div class="bg-white p-6 shadow rounded-lg">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-indigo-700">Extras</h2>
+        <button
+          @click="showExtra=true"
+          class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+        >
+          + Add Extra
+        </button>
+      </div>
+
+      <template x-if="loading.extras">
+        <div class="flex items-center space-x-2">
+          <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Loading extras...</span>
+        </div>
+      </template>
+
+      <template x-if="!loading.extras">
+        <ul class="space-y-2 text-sm text-gray-700">
+          <template x-if="extras.length > 0">
+            <template x-for="e in extras" :key="e.id">
+              <li class="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                <div>
+                  <span class="font-medium" x-text="e.description"></span>
+                  <span class="text-green-600 ml-2" x-text="`+${fmt(e.money)}`"></span>
+                </div>
+                <button
+                  @click="deleteExtra(e.id)"
+                  class="text-red-500 hover:text-red-700 text-xs"
+                >
+                  Delete
+                </button>
+              </li>
+            </template>
+          </template>
+          <template x-if="extras.length === 0">
+            <li class="text-gray-400 p-2">No extras added.</li>
+          </template>
+        </ul>
+      </template>
+    </div>
+
+    <!-- Discounts Card -->
+    <div class="bg-white p-6 shadow rounded-lg">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-indigo-700">Discounts</h2>
+        <button
+          @click="showDisc=true"
+          class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+        >
+          + Add Discount
+        </button>
+      </div>
+
+      <template x-if="loading.discounts">
+        <div class="flex items-center space-x-2">
+          <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Loading discounts...</span>
+        </div>
+      </template>
+
+      <template x-if="!loading.discounts">
+        <ul class="space-y-2 text-sm text-gray-700">
+          <template x-if="discounts.length > 0">
+            <template x-for="d in discounts" :key="d.id">
+              <li class="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                <div>
+                  <span class="font-medium" x-text="d.description"></span>
+                  <span class="text-red-600 ml-2" x-text="`-${fmt(d.discount_money)}`"></span>
+                  <span class="text-xs text-gray-500 ml-2" x-text="`(${d.time}%)`"></span>
+                </div>
+                <button
+                  @click="deleteDiscount(d.id)"
+                  class="text-red-500 hover:text-red-700 text-xs"
+                >
+                  Delete
+                </button>
+              </li>
+            </template>
+          </template>
+          <template x-if="discounts.length === 0">
+            <li class="text-gray-400 p-2">No discounts applied.</li>
+          </template>
+        </ul>
+      </template>
+    </div>
+  </div>
+
+  <!-- 4) PARTIAL PAYMENT SECTION -->
+  <div class="bg-white p-6 shadow rounded-lg mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold text-indigo-700">Partial Payment</h2>
+      <button
+        @click="showPartial=true"
+        class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+        x-show="!partial"
+      >
+        Add Partial Payment
+      </button>
+    </div>
+
+    <template x-if="loading.partial">
+      <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <span>Loading partial payment data...</span>
+      </div>
+    </template>
+
+    <template x-if="!loading.partial && partial">
+      <div class="text-sm text-gray-700 space-y-2">
+        <div class="flex justify-between">
+          <span class="font-medium">Total:</span>
+          <span x-text="fmt(partial.total)"></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-medium">Paid:</span>
+          <span class="text-green-600" x-text="fmt(partial.amount)"></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-medium">Remaining:</span>
+          <span class="text-red-600" x-text="fmt(partial.total - partial.amount)"></span>
+        </div>
+        <button
+          @click="showPartial=true"
+          class="mt-4 text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+        >
+          Update Payment
+        </button>
+      </div>
+    </template>
+
+    <template x-if="!loading.partial && !partial">
+      <p class="text-gray-500">No partial payment recorded.</p>
+    </template>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Add Extra Modal -->
+  <div
+    x-show="showExtra"
+    x-transition
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+    @click.away="showExtra = false"
+  >
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4">
+      <h3 class="text-lg font-semibold mb-4">Add Extra</h3>
+      <form @submit.prevent="addExtra()">
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-1">Description</label>
+          <input
+            x-model="newExtra.description"
+            type="text"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Description of the extra"
+          >
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-1">Amount (ETB)</label>
+          <input
+            x-model="newExtra.money"
+            type="number"
+            step="0.01"
+            min="0"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="0.00"
+          >
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button
+            type="button"
+            @click="showExtra=false"
+            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+            :disabled="!newExtra.description || !newExtra.money"
+            :class="{'opacity-50 cursor-not-allowed': !newExtra.description || !newExtra.money}"
+          >
+            Save Extra
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Discount Modal -->
+  <div
+    x-show="showDisc"
+    x-transition
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+    @click.away="showDisc = false"
+  >
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4">
+      <h3 class="text-lg font-semibold mb-4">Add Discount</h3>
+      <form @submit.prevent="addDisc()">
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-1">Description</label>
+          <input
+            x-model="newDisc.description"
+            type="text"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Description of the discount"
+          >
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-1">Discount Percentage</label>
+          <input
+            x-model="newDisc.time"
+            type="number"
+            min="0"
+            max="100"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="0-100%"
+          >
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-1">Amount (ETB)</label>
+          <input
+            x-model="newDisc.discount_money"
+            type="number"
+            step="0.01"
+            min="0"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="0.00"
+          >
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button
+            type="button"
+            @click="showDisc=false"
+            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+            :disabled="!newDisc.description || !newDisc.time || !newDisc.discount_money"
+            :class="{'opacity-50 cursor-not-allowed': !newDisc.description || !newDisc.time || !newDisc.discount_money}"
+          >
+            Save Discount
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Partial Payment Modal -->
+  <div
+    x-show="showPartial"
+    x-transition
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+    @click.away="showPartial = false"
+  >
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4">
+      <h3 class="text-lg font-semibold mb-4">
+        <span x-text="partial ? 'Update Partial Payment' : 'Add Partial Payment'"></span>
+      </h3>
+      <form @submit.prevent="savePartial()">
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-1">Total Amount (ETB)</label>
+          <input
+            x-model="newPartial.total"
+            type="number"
+            step="0.01"
+            min="0"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Total contract amount"
+          >
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-1">Paid Amount (ETB)</label>
+          <input
+            x-model="newPartial.amount"
+            type="number"
+            step="0.01"
+            min="0"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Amount paid"
+          >
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button
+            type="button"
+            @click="showPartial=false"
+            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+            :disabled="!newPartial.total || !newPartial.amount"
+            :class="{'opacity-50 cursor-not-allowed': !newPartial.total || !newPartial.amount}"
+          >
+            <span x-text="partial ? 'Update' : 'Save'"></span> Payment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+{% block scripts %}
+  <!-- Alpine.js -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+
+  <script>
+    function contractManager({ contractId, urls }) {
+      return {
+        contractId, urls,
+        overview: null,
+        overviewHTML: '',
+        summary: null,
+        extras: [],
+        discounts: [],
+        partial: null,
+        loading: {
+          overview: true,
+          summary: true,
+          extras: true,
+          discounts: true,
+          partial: true
+        },
+        showExtra: false,
+        showDisc: false,
+        showPartial: false,
+        errorMessage: null,
+        successMessage: null,
+        newExtra: { description: '', money: null },
+        newDisc:  { description: '', time: null, discount_money: null },
+        newPartial: { total: null, amount: null },
+
+        // Format currency
+        fmt(amount) {
+          if (amount === null || amount === undefined) return 'ETB 0.00';
+          return new Intl.NumberFormat('en-ET', {
+            style: 'currency',
+            currency: 'ETB',
+            minimumFractionDigits: 2
+          }).format(amount);
+        },
+
+        // Show success message
+        showSuccess(message) {
+          this.successMessage = message;
+          setTimeout(() => this.successMessage = null, 5000);
+        },
+
+        // Show error message
+        showError(message) {
+          this.errorMessage = message;
+          setTimeout(() => this.errorMessage = null, 5000);
+        },
+
+        // Initialize component
+        async init() {
+          try {
+            await Promise.all([
+              this.loadOverview(),
+              this.loadSummary(),
+              this.loadExtras(),
+              this.loadDiscounts(),
+              this.loadPartial()
+            ]);
+          } catch (error) {
+            console.error('Initialization error:', error);
+            this.showError('Failed to load contract data. Please refresh the page.');
+          }
+        },
+
+        // Load contract overview
+        async loadOverview() {
+          try {
+            this.loading.overview = true;
+            const response = await fetch(this.urls.detail);
+            if (!response.ok) throw new Error('Failed to load contract details');
+
+            const data = await response.json();
+            this.overview = data;
+            this.overviewHTML = `
+              <p><strong>Start:</strong> ${new Date(data.start_date).toLocaleDateString()}</p>
+              <p><strong>End:</strong> ${new Date(data.end_date).toLocaleDateString()}</p>
+              <p><strong>Duration:</strong> ${data.paytime} months</p>
+              <p><strong>Status:</strong> ${data.payed_display}</p>
+            `;
+          } catch (error) {
+            console.error('Error loading overview:', error);
+            this.showError('Failed to load contract details');
+          } finally {
+            this.loading.overview = false;
+          }
+        },
+
+        // Load payment summary
+        async loadSummary() {
+          try {
+            this.loading.summary = true;
+            const response = await fetch(this.urls.calculator);
+            if (!response.ok) throw new Error('Failed to load payment summary');
+
+            this.summary = await response.json();
+          } catch (error) {
+            console.error('Error loading summary:', error);
+            this.showError('Failed to load payment summary');
+          } finally {
+            this.loading.summary = false;
+          }
+        },
+
+        // Load extras
+        async loadExtras() {
+          try {
+            this.loading.extras = true;
+            const response = await fetch(this.urls.extras);
+            if (!response.ok) throw new Error('Failed to load extras');
+
+            this.extras = await response.json();
+          } catch (error) {
+            console.error('Error loading extras:', error);
+            this.showError('Failed to load extras');
+          } finally {
+            this.loading.extras = false;
+          }
+        },
+
+        // Load discounts
+        async loadDiscounts() {
+          try {
+            this.loading.discounts = true;
+            const response = await fetch(this.urls.discounts);
+            if (!response.ok) throw new Error('Failed to load discounts');
+
+            this.discounts = await response.json();
+          } catch (error) {
+            console.error('Error loading discounts:', error);
+            this.showError('Failed to load discounts');
+          } finally {
+            this.loading.discounts = false;
+          }
+        },
+
+        // Load partial payment
+        async loadPartial() {
+          try {
+            this.loading.partial = true;
+            const response = await fetch(this.urls.partial);
+
+            if (response.ok) {
+              this.partial = await response.json();
+              // Initialize form with existing values if updating
+              this.newPartial = {
+                total: this.partial.total,
+                amount: this.partial.amount
+              };
+            } else if (response.status === 404) {
+              this.partial = null;
+            } else {
+              throw new Error('Failed to load partial payment');
+            }
+          } catch (error) {
+            console.error('Error loading partial payment:', error);
+            this.showError('Failed to load partial payment data');
+          } finally {
+            this.loading.partial = false;
+          }
+        },
+
+        // Add extra
+        async addExtra() {
+          try {
+            // Validate
+            if (!this.newExtra.description || !this.newExtra.money) {
+              throw new Error('Please fill all required fields');
+            }
+
+            const res = await fetch(this.urls.extras, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.$refs.csrf.value
+              },
+              body: JSON.stringify(this.newExtra)
+            });
+
+            if (!res.ok) {
+              const errorData = await res.json();
+              throw new Error(errorData.message || 'Failed to add extra');
+            }
+
+            const newExtra = await res.json();
+            this.extras.push(newExtra);
+            this.newExtra = { description: '', money: null };
+            this.showExtra = false;
+            this.showSuccess('Extra added successfully');
+
+            // Reload summary to reflect changes
+            await this.loadSummary();
+          } catch (error) {
+            console.error('Error adding extra:', error);
+            this.showError(error.message || 'Failed to add extra');
+          }
+        },
+
+        // Delete extra
+        async deleteExtra(id) {
+          if (!confirm('Are you sure you want to delete this extra?')) return;
+
+          try {
+            const res = await fetch(`${this.urls.extras}${id}/`, {
+              method: 'DELETE',
+              headers: {
+                'X-CSRFToken': this.$refs.csrf.value
+              }
+            });
+
+            if (!res.ok) throw new Error('Failed to delete extra');
+
+            this.extras = this.extras.filter(e => e.id !== id);
+            this.showSuccess('Extra deleted successfully');
+
+            // Reload summary to reflect changes
+            await this.loadSummary();
+          } catch (error) {
+            console.error('Error deleting extra:', error);
+            this.showError(error.message || 'Failed to delete extra');
+          }
+        },
+
+        // Add discount
+        async addDisc() {
+          try {
+            // Validate
+            if (!this.newDisc.description || !this.newDisc.time || !this.newDisc.discount_money) {
+              throw new Error('Please fill all required fields');
+            }
+
+            if (this.newDisc.time < 0 || this.newDisc.time > 100) {
+              throw new Error('Discount percentage must be between 0 and 100');
+            }
+
+            const res = await fetch(this.urls.discounts, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.$refs.csrf.value
+              },
+              body: JSON.stringify(this.newDisc)
+            });
+
+            if (!res.ok) {
+              const errorData = await res.json();
+              throw new Error(errorData.message || 'Failed to add discount');
+            }
+
+            const newDisc = await res.json();
+            this.discounts.push(newDisc);
+            this.newDisc = { description: '', time: null, discount_money: null };
+            this.showDisc = false;
+            this.showSuccess('Discount added successfully');
+
+            // Reload summary to reflect changes
+            await this.loadSummary();
+          } catch (error) {
+            console.error('Error adding discount:', error);
+            this.showError(error.message || 'Failed to add discount');
+          }
+        },
+
+        // Delete discount
+        async deleteDiscount(id) {
+          if (!confirm('Are you sure you want to delete this discount?')) return;
+
+          try {
+            const res = await fetch(`${this.urls.discounts}${id}/`, {
+              method: 'DELETE',
+              headers: {
+                'X-CSRFToken': this.$refs.csrf.value
+              }
+            });
+
+            if (!res.ok) throw new Error('Failed to delete discount');
+
+            this.discounts = this.discounts.filter(d => d.id !== id);
+            this.showSuccess('Discount deleted successfully');
+
+            // Reload summary to reflect changes
+            await this.loadSummary();
+          } catch (error) {
+            console.error('Error deleting discount:', error);
+            this.showError(error.message || 'Failed to delete discount');
+          }
+        },
+
+        // Save partial payment
+        async savePartial() {
+          try {
+            // Validate
+            if (!this.newPartial.total || !this.newPartial.amount) {
+              throw new Error('Please fill all required fields');
+            }
+
+            if (parseFloat(this.newPartial.amount) > parseFloat(this.newPartial.total)) {
+              throw new Error('Paid amount cannot exceed total amount');
+            }
+
+            const method = this.partial ? 'PUT' : 'POST';
+            const url = this.partial ? this.urls.partial : `${this.urls.partial}`;
+
+            const res = await fetch(url, {
+              method,
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.$refs.csrf.value
+              },
+              body: JSON.stringify(this.newPartial)
+            });
+
+            if (!res.ok) {
+              const errorData = await res.json();
+              throw new Error(errorData.message || 'Failed to save partial payment');
+            }
+
+            this.partial = await res.json();
+            this.showPartial = false;
+            this.showSuccess('Partial payment saved successfully');
+
+            // Reload summary to reflect changes
+            await this.loadSummary();
+          } catch (error) {
+            console.error('Error saving partial payment:', error);
+            this.showError(error.message || 'Failed to save partial payment');
+          }
+        },
+
+        // Print receipt via jsPDF
+        printReceipt() {
+          if (!this.summary) return;
+
+          try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Header
+            doc.setFontSize(18);
+            doc.setTextColor(40, 40, 40);
+            doc.text(`Contract #${this.contractId} Receipt`, 20, 20);
+
+            doc.setFontSize(12);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 30);
+
+            // Line separator
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, 35, 190, 35);
+
+            let y = 45;
+
+            // Base
+            doc.setFontSize(14);
+            doc.text('Base Contract:', 20, y);
+            doc.text(this.fmt(this.summary.base_amount), 180, y, { align: 'right' });
+            y += 10;
+
+            // Partial
+            if (this.partial) {
+              doc.text('Partial Payment:', 20, y);
+              doc.text(`-${this.fmt(this.partial.amount)}`, 180, y, { align: 'right' });
+              y += 10;
+            }
+
+            // Extras
+            if (this.extras.length > 0) {
+              doc.text('Extras:', 20, y);
+              y += 10;
+
+              this.extras.forEach(e => {
+                doc.setFontSize(10);
+                doc.text(`- ${e.description}`, 25, y);
+                doc.text(`+${this.fmt(e.money)}`, 180, y, { align: 'right' });
+                y += 7;
+              });
+
+              doc.setFontSize(14);
+              y += 3;
+            }
+
+            // Discounts
+            if (this.discounts.length > 0) {
+              doc.text('Discounts:', 20, y);
+              y += 10;
+
+              this.discounts.forEach(d => {
+                doc.setFontSize(10);
+                doc.text(`- ${d.description} (${d.time}%)`, 25, y);
+                doc.text(`-${this.fmt(d.discount_money)}`, 180, y, { align: 'right' });
+                y += 7;
+              });
+
+              doc.setFontSize(14);
+              y += 3;
+            }
+
+            // Total line
+            doc.setDrawColor(150, 150, 150);
+            doc.line(20, y, 190, y);
+            y += 10;
+
+            // Net total
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('NET TOTAL:', 20, y);
+            doc.text(this.fmt(this.summary.net_total), 180, y, { align: 'right' });
+
+            // Save PDF
+            doc.save(`contract_${this.contractId}_receipt.pdf`);
+          } catch (error) {
+            console.error('Error generating PDF:', error);
+            this.showError('Failed to generate receipt');
+          }
+        }
+      }
+    }
+  </script>
+{% endblock %}
+
+
+
+
+
+
+
+  x-data="contractManager({
+    contractId: {{ contract_id }},
+    urls: {
+      detail:     `{% url 'contract-detail' id=contract_id %}`,
+      calculator: `{% url 'contract_calculator_api' id=contract_id %}`,
+      extras:     `{% url 'contract-extras' contract_id=contract_id %}`,
+      discounts:  `{% url 'contract-discounts' contract_id=contract_id %}`,
+      partial:    `{% url 'partial-detail' contract_id=contract_id %}`
+    }
+  })"
+  x-init="init()"
+  x-cloak

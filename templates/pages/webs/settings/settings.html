@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load rest_framework %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold mb-8">System Settings</h1>
+    {% if error %}
+        <div class="text-red-500 mb-4 text-sm">
+            {% for field, messages in error.items %}
+                <p><strong>{{ field|title }}:</strong> {{ messages.0 }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Global Settings Column -->
+        {% if is_superuser %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4 text-primary-700 dark:text-primary-400">Global Settings</h2>
+            <form id="global-form" hx-post="{% url 'settings-api' %}" hx-trigger="submit" hx-target="#global-response" hx-swap="outerHTML">
+                {% csrf_token %}
+                <div class="space-y-6">
+                    <!-- Company Name -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Company Name</label>
+                        <input type="text" name="global_settings[company_name]" value="{{ global_settings.company_name }}"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700">
+                    </div>
+
+                    <!-- Default Currency -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Default Currency</label>
+                        <select name="global_settings[default_currency]" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700">
+                            {% for currency in currencies %}
+                                <option value="{{ currency }}" {% if global_settings.default_currency == currency %}selected{% endif %}>{{ currency }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Toggle Example -->
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Enable Notifications</label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">System-wide notifications</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="global_settings[notifications_enabled]" value="true" class="sr-only peer"
+                                {% if global_settings.notifications_enabled %}checked{% endif %}>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Additional fields would go here... -->
+                </div>
+
+                <div class="mt-8">
+                    <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md transition">Save Global Settings</button>
+                </div>
+                <div id="global-response"></div>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Personal Settings Column -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4 text-primary-700 dark:text-primary-400">Personal Settings</h2>
+            <form id="personal-form" hx-post="{% url 'settings-api' %}" hx-trigger="submit" hx-target="#personal-response" hx-swap="outerHTML">
+                {% csrf_token %}
+                <div class="space-y-6">
+                    <!-- Dark Mode Toggle -->
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Dark Mode</label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Interface color scheme</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="personal_settings[dark_mode]" value="true" class="sr-only peer"
+                                {% if personal_settings.dark_mode %}checked{% endif %}>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Language Selector -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Language</label>
+                        <select name="personal_settings[preferred_language]" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700">
+                            {% for code, name in languages %}
+                                <option value="{{ code }}" {% if personal_settings.preferred_language == code %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Additional fields would go here... -->
+                </div>
+
+                <div class="mt-8">
+                    <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md transition">Save Personal Settings</button>
+                </div>
+                <div id="personal-response"></div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

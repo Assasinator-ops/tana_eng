@@ -1,0 +1,13 @@
+# Create employee
+POST /api/employees/
+{
+    "name": "John Doe",
+    "email": "john@company.com",
+    "usertype": 1,
+    "phone": "555-1234",
+    "password": "secure123",
+    "status": true
+}
+
+# Get by email
+GET /api/employees/by-email/?email=john@company.com

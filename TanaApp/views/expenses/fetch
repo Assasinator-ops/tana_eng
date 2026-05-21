@@ -1,0 +1,13 @@
+# Create expense
+POST /api/expenses/
+{
+    "capacity": 10,
+    "number_of_stops": 5,
+    "item": "Motor",
+    "unit": 299.99,
+    "quantity": 2,
+    "shaft": 1
+}
+
+# Get all expenses
+GET /api/expenses/

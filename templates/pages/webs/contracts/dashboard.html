@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="p-4 space-y-6">
+  <!-- Contract Creation Form -->
+  <form action="{% url 'contract-list' %}" method="post" class="space-y-4 bg-white p-6 rounded shadow">
+    {% csrf_token %}
+    <h2 class="text-xl font-bold">Create New Contract</h2>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Start Date</label>
+      <input type="date" name="start_date" required class="mt-1 block w-full border border-gray-300 rounded-md">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">End Date</label>
+      <input type="date" name="end_date" required class="mt-1 block w-full border border-gray-300 rounded-md">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Payment Time (%)</label>
+      <input type="number" name="paytime" required class="mt-1 block w-full border border-gray-300 rounded-md">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Elevators (without contract or expired warranty)</label>
+      <select name="elevator_ids" multiple required class="mt-1 block w-full border border-gray-300 rounded-md">
+        {% for elevator in elevators %}
+          <option value="{{ elevator.id }}">{{ elevator.name }} - {{ elevator.Total }}</option>
+        {% empty %}
+          <option disabled>No eligible elevators found.</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Create Contract</button>
+  </form>
+
+  <!-- Contract List for this Building -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">Contracts for This Building</h2>
+    {% for contract in building_contracts %}
+    <div class="border-t py-4">
+      <p><strong>ID:</strong> {{ contract.id }}</p>
+      <p><strong>Start:</strong> {{ contract.start_date|date:"Y-m-d" }}</p>
+      <p><strong>End:</strong> {{ contract.end_date|date:"Y-m-d" }}</p>
+      <p><strong>Paytime:</strong> {{ contract.paytime }}%</p>
+
+      <a href="{% url 'contract-detail' contract.id %}" class="text-blue-500">Edit</a> |
+      <a href="{% url 'contract-total' contract.id %}" class="text-green-500">Total Summary</a>
+    </div>
+    {% empty %}
+    <p class="text-gray-600">No contracts for this building.</p>
+    {% endfor %}
+  </div>
+
+  <!-- Expired Contracts View -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">Expired Contracts</h2>
+    {% for contract in expired_contracts %}
+    <div class="border-t py-4">
+      <p><strong>Contract ID:</strong> {{ contract.id }}</p>
+      <p><strong>Building:</strong> {{ contract.buildingname }}</p>
+      <p><strong>Elevator:</strong> {{ contract.elevatorname }}</p>
+      <p><strong>Total:</strong> {{ contract.elevatortotal }}</p>
+    </div>
+    {% empty %}
+    <p class="text-gray-600">No expired contracts.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+{% block splash_script %}
+        // Hide splash after 2 seconds
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(function() {
+                document.getElementById("splash").classList.add("hidden");
+                // document.getElementById("content").style.display = "block";
+                document.getElementById("content").classList.remove("hidden");
+            }, 1000);
+        });
+{% endblock %}
+{% block splash_screen %}
+<!-- Splash screen -->
+<div id="splash">
+  <h1 class="text-blue-500">Tana Engineering PLC</h1>
+  <p class="text-gray-400 animate-pulse"><i>Your source of reliability</i></p>
+</div>
+{% endblock %}
+{% block splash_behaviour %} hidden{% endblock %}

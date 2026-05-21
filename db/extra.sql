@@ -1,0 +1,1 @@
+INSERT INTO `extra` VALUES (5,892.5,'Additional charge.','Additional charge.',8);

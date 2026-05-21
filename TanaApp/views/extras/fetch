@@ -1,0 +1,13 @@
+# Create extra for contract 5
+POST /api/extras/contract/5/
+{
+    "money": 1500.00,
+    "discription": "Emergency repair",
+    "discription1": "Additional costs"
+}
+
+# Update extra
+PATCH /api/extras/42/
+{
+    "money": 2000.00
+}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load rest_framework %}
+{% block content %}
+<div class="max-w-7xl mx-auto mt-10 bg-white p-6 rounded shadow">
+    <h2 class="text-2xl font-semibold mb-4">Add New Building</h2>
+    {% if error %}
+        <div class="text-red-500 mb-4 text-sm">
+            {% for field, messages in error.items %}
+                <p><strong>{{ field|title }}:</strong> {{ messages.0 }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <form action="" method="post">
+        {% csrf_token %}
+        {% render_form serializer %}
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+    </form>
+</div>
+{% endblock %}

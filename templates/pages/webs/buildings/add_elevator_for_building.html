@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
+  <h2 class="text-xl font-semibold mb-4">Add Elevator for Building: {{ building.name }}</h2>
+  <form id="elevator-form" class="space-y-4">
+    {% csrf_token %}
+    <input type="text" name="id" placeholder="Elevator ID" class="w-full border rounded p-2" required />
+    <input type="text" name="commissionnumber" placeholder="Commission Number" class="w-full border rounded p-2" required />
+    <input type="text" name="name" placeholder="Elevator Name" class="w-full border rounded p-2" required />
+    <input type="text" name="model" placeholder="Model" class="w-full border rounded p-2" required />
+    <input type="number" name="number_of_stops" placeholder="Number of Stops" class="w-full border rounded p-2" required />
+    <input type="number" name="landing_door_unit" placeholder="Landing Door Unit" class="w-full border rounded p-2" />
+    <input type="number" name="landing_door_quantity" placeholder="Landing Door Quantity" class="w-full border rounded p-2" />
+    <input type="number" name="drive_unit" placeholder="Drive Unit" class="w-full border rounded p-2" />
+    <input type="number" name="drive_quantity" placeholder="Drive Quantity" class="w-full border rounded p-2" />
+    <input type="number" name="car" placeholder="Car" class="w-full border rounded p-2" />
+    <input type="number" name="car_quantity" placeholder="Car Quantity" class="w-full border rounded p-2" />
+    <input type="number" name="shaft_pit" placeholder="Shaft Pit" class="w-full border rounded p-2" />
+    <input type="number" name="shaft_quantity" placeholder="Shaft Quantity" class="w-full border rounded p-2" />
+    <input type="datetime-local" name="registerd_date" placeholder="Registered Date" class="w-full border rounded p-2" required />
+    <input type="datetime-local" name="started_date" placeholder="Started Date" class="w-full border rounded p-2" required />
+
+    <div class="flex space-x-4 pt-4">
+      <button type="button" onclick="submitElevatorForm()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Create Elevator</button>
+      <a href="{% url 'buildings-detail-page' building.id %}" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      document.cookie.split(';').forEach(cookie => {
+        const [key, val] = cookie.trim().split('=');
+        if (key === name) cookieValue = decodeURIComponent(val);
+      });
+    }
+    return cookieValue;
+  }
+
+  function submitElevatorForm() {
+    const form = document.getElementById('elevator-form');
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach((value, key) => {
+      data[key] = value;
+    });
+
+    fetch("", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify(data)
+    })
+    .then(res => {
+      if (!res.ok) return res.json().then(err => { throw err; });
+      return res.json();
+    })
+    .then(json => {
+      alert("Elevator added!");
+      window.location.href = `{% url 'buildings-detail-page' building.id %}`;
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error: " + JSON.stringify(err));
+    });
+  }
+</script>
+{% endblock %}

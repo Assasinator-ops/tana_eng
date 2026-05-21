@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% load static %}
+{% load rest_framework %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-6 px-4 space-y-5">
+
+  <header class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Contract</p>
+      <div class="flex flex-wrap items-baseline gap-2 mt-0.5">
+        <h1 class="text-xl font-bold text-slate-900">#{{ contract.id }}</h1>
+        <span class="text-slate-400">&middot;</span>
+        <a class="text-sm font-medium text-slate-700 hover:text-slate-900" href="{% url 'buildings-detail-page' id=contract.building.id %}">{{ contract.building.name }}</a>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      {% if contract.payed == 2 %}
+        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-600/20">Fully paid</span>
+      {% elif contract.payed == 3 %}
+        <span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-800 ring-1 ring-sky-600/20">Partial paid</span>
+      {% else %}
+        <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-600/20">Not paid</span>
+      {% endif %}
+
+      {% if contract_is_active %}
+        <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-blue-600/20">Active</span>
+      {% else %}
+        <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-300">Ended</span>
+      {% endif %}
+
+      <a href="{% url 'contract_calculator' id=contract.id %}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Calculator</a>
+      <button type="button" onclick="reloadToSection()" class="text-xs text-slate-500 hover:text-slate-800" title="Reload">Reload</button>
+    </div>
+  </header>
+
+  <section aria-label="Contract timeline" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 border-l-[3px] border-l-blue-500 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Starts</p>
+      <p class="text-sm font-semibold text-slate-900 leading-tight">{{ contract.start_date|date:"M j, Y" }}</p>
+      <p class="text-[11px] text-slate-500">{{ contract.start_date|date:"g:i A" }}</p>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 border-l-[3px] {% if contract_is_active %}border-l-emerald-500{% else %}border-l-slate-400{% endif %} shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Ends</p>
+      <p class="text-sm font-semibold text-slate-900 leading-tight">{{ contract.end_date|date:"M j, Y" }}</p>
+      <p class="text-[11px] text-slate-500">{{ contract.end_date|date:"g:i A" }}</p>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-violet-50/80 px-3 py-2.5 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-violet-600">Duration</p>
+      <p class="text-sm font-semibold text-violet-900">{{ contract.paytime }} <span class="font-normal text-violet-700">mo</span></p>
+      <p class="text-[11px] text-violet-600/80">scheduled term</p>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Remaining</p>
+      {% if contract_is_active %}
+        <p class="text-sm font-semibold text-emerald-700">{{ days_remaining }} <span class="font-normal text-slate-600">days</span></p>
+        <div class="mt-1.5 h-1 w-full rounded-full bg-slate-100 overflow-hidden" title="{{ contract_progress_pct }}% elapsed">
+          <div class="h-full rounded-full bg-emerald-500 contract-progress-fill" data-progress="{{ contract_progress_pct }}"></div>
+        </div>
+      {% else %}
+        <p class="text-sm font-semibold text-slate-500">&mdash;</p>
+        <p class="text-[11px] text-slate-400">Ended</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- 1) Update Contract -->
+  <div id="contract" class="bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-base font-semibold text-gray-800">Update contract</h2>
+      <p class="text-xs text-slate-500">Edit dates &amp; status below</p>
+    </div>
+
+    {% if payment_summary.balance_due > 0.01 %}
+      <div class="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <span class="font-semibold">Outstanding:</span>
+        ETB {{ payment_summary.balance_due|floatformat:2 }} expected
+        <span class="text-amber-700">(paid ETB {{ payment_summary.amount_paid|floatformat:2 }} of ETB {{ payment_summary.net_total|floatformat:2 }})</span>
+        &mdash; cannot set status to Fully paid until settled.
+      </div>
+    {% else %}
+      <div class="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+        Balance settled. Fully paid is allowed.
+      </div>
+    {% endif %}
+
+    <form id="contract-form" class="space-y-4"
+          data-can-fully-paid="{% if can_mark_fully_paid %}true{% else %}false{% endif %}"
+          data-can-not-paid="{% if can_mark_not_paid %}true{% else %}false{% endif %}"
+          data-can-partial-paid="{% if can_mark_partial_paid %}true{% else %}false{% endif %}">
+      {% csrf_token %}
+      {% render_form contract_form %}
+      <div>
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+          Save Contract
+        </button>
+      </div>
+      <p id="contract-msg" class="mt-2 text-sm"></p>
+    </form>
+
+    <button onclick="reloadToSection('contract')" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+      Reload section
+    </button>
+  </div>
+
+  <!-- 2) Extras -->
+  <div id="extras" class="bg-white shadow-sm rounded-lg p-5 border border-gray-200">
+    <h2 class="text-base font-semibold mb-3 text-gray-800">Extras</h2>
+
+    <ul class="list-disc pl-5 mb-4 text-gray-700 text-sm">
+      {% for e in contract_data.extras %}
+        <li class="flex items-center justify-between gap-2 py-0.5">
+          <span>{{ e.description }} &ndash; {{ e.percentage|floatformat:2 }}%</span>
+          <button class="delete-extra-btn text-red-500 hover:text-red-700 shrink-0"
+                  data-id="{{ e.id }}" type="button" title="Delete">Delete</button>
+        </li>
+      {% empty %}
+        <li class="italic text-gray-400">No extras added.</li>
+      {% endfor %}
+    </ul>
+
+    <form id="extra-form" class="space-y-4">
+      {% csrf_token %}
+      {% render_form extras_form %}
+      <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700">
+        Save Extra
+      </button>
+      <p id="extra-msg" class="mt-2 text-sm"></p>
+    </form>
+
+    <button onclick="reloadToSection('extras')" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+      Reload section
+    </button>
+  </div>
+
+  <!-- 3) Discounts -->
+  <div id="discounts" class="bg-white shadow-sm rounded-lg p-5 border border-gray-200">
+    <h2 class="text-base font-semibold mb-3 text-gray-800">Discounts</h2>
+
+    <ul class="list-disc pl-5 mb-4 text-gray-700 text-sm">
+      {% for d in contract_data.discounts %}
+        <li class="flex items-center justify-between gap-2 py-0.5">
+          <span>{{ d.description }} &ndash; {{ d.percentage|floatformat:2 }}%</span>
+          <button class="delete-discount-btn text-red-500 hover:text-red-700 shrink-0"
+                  data-id="{{ d.id }}" type="button" title="Delete">Delete</button>
+        </li>
+      {% empty %}
+        <li class="italic text-gray-400">No discounts applied.</li>
+      {% endfor %}
+    </ul>
+
+    <form id="discount-form" class="space-y-4">
+      {% csrf_token %}
+      {% render_form discounts_form %}
+      <button type="submit" class="px-4 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700">
+        Save Discount
+      </button>
+      <p id="discount-msg" class="mt-2 text-sm"></p>
+    </form>
+
+    <button onclick="reloadToSection('discounts')" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+      Reload section
+    </button>
+  </div>
+
+  <!-- 4) Partial Payment -->
+  <div id="partialpayments" class="bg-white shadow-sm rounded-lg p-5 border border-gray-200">
+    <h2 class="text-base font-semibold mb-3 text-gray-800">Partial payment</h2>
+
+    <div class="flex items-center justify-between mb-4 rounded-md bg-slate-50 px-3 py-2 text-sm">
+      {% if contract_data.partial %}
+        <span class="text-slate-700">
+          Paid <strong class="text-emerald-700">{{ contract_data.partial.amount|floatformat:2 }}</strong>
+          / {{ contract_data.partial.total|floatformat:2 }} ETB
+        </span>
+        <button id="delete-partial-btn" type="button" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+      {% else %}
+        <p class="italic text-gray-400">No partial payment recorded.</p>
+      {% endif %}
+    </div>
+
+    <form id="partial-form" class="space-y-4">
+      {% csrf_token %}
+      {% render_form partial_form %}
+      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+        Save Partial Payment
+      </button>
+      <p id="partial-msg" class="mt-2 text-sm"></p>
+    </form>
+
+    <button onclick="reloadToSection('partialpayments')" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+      Reload section
+    </button>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.location.hash) {
+    setTimeout(function() {
+      var el = document.getElementById(window.location.hash.substring(1));
+      if (el) {
+        var yOffset = -80;
+        var y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({top: y, behavior: 'smooth'});
+      }
+    }, 100);
+  }
+});
+
+function getCSRF() {
+  return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+async function bindFetch(formId, url, method, msgId) {
+  const form = document.getElementById(formId);
+  const msg  = document.getElementById(msgId);
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    msg.textContent = 'Saving…';
+
+    const data = {};
+    new FormData(form).forEach((value, key) => data[key] = value);
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken':  getCSRF()
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        const detail = err.detail || err.payed || (typeof err === 'object' ? Object.values(err).flat().join(' ') : 'Validation error');
+        msg.textContent = 'Error: ' + detail;
+        msg.className = 'text-red-600';
+      } else {
+        msg.textContent = 'Saved successfully.';
+        msg.className = 'text-green-600';
+
+        if (formId === 'contract-form') {
+          setTimeout(() => window.location.reload(), 600);
+        }
+      }
+    } catch (e) {
+      msg.textContent = 'Network error';
+      msg.className = 'text-red-600';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  bindFetch('contract-form',
+    `{% url 'contract-detail' id=contract_id %}`,
+    'PUT',
+    'contract-msg'
+  );
+
+  bindFetch('extra-form',
+    `{% url 'contract-extras' contract_id=contract_id %}`,
+    'POST',
+    'extra-msg'
+  );
+
+  bindFetch('discount-form',
+    `{% url 'contract-discounts' contract_id=contract_id %}`,
+    'POST',
+    'discount-msg'
+  );
+
+  bindFetch('partial-form',
+    `{% url 'partial-update' contract_id=contract_id %}`,
+    'PATCH',
+    'partial-msg'
+  );
+});
+
+function reloadToSection(sectionId = null) {
+  if (sectionId) {
+    window.location.hash = sectionId.startsWith('#') ? sectionId : '#' + sectionId;
+  }
+  window.location.reload();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  function removeRow(el) {
+    el.closest('li, div').remove();
+  }
+
+  document.querySelectorAll('.delete-extra-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this extra?')) return;
+      const id = btn.dataset.id;
+
+      const res = await fetch(
+        `{% url 'extra-delete' id=0 %}`.replace('0', id),
+        { method: 'DELETE', headers: {'X-CSRFToken': csrftoken} }
+      );
+
+      if (res.ok) removeRow(btn);
+      else alert('Failed to delete extra');
+    });
+  });
+
+  document.querySelectorAll('.delete-discount-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this discount?')) return;
+      const id = btn.dataset.id;
+
+      const res = await fetch(
+        `{% url 'discount-delete' id=0 %}`.replace('0', id),
+        { method: 'DELETE', headers: {'X-CSRFToken': csrftoken} }
+      );
+
+      if (res.ok) removeRow(btn);
+      else alert('Failed to delete discount');
+    });
+  });
+
+  const pBtn = document.getElementById('delete-partial-btn');
+  if (pBtn) {
+    pBtn.addEventListener('click', async () => {
+      if (!confirm('Delete partial payment record?')) return;
+      const contractId = {{ contract_id }};
+
+      const res = await fetch(
+        `{% url 'partial-delete' contract_id=0 %}`.replace('0', contractId),
+        { method: 'DELETE', headers: {'X-CSRFToken': csrftoken} }
+      );
+
+      if (res.ok) window.location.reload();
+      else alert('Failed to delete partial payment');
+    });
+  }
+});
+
+(function () {
+  const form = document.getElementById('contract-form');
+  if (!form) return;
+
+  const payedSelect = form.querySelector('select[name="payed"]');
+  if (!payedSelect) return;
+
+  const toggle = (value, allowed) => {
+    const opt = payedSelect.querySelector('option[value="' + value + '"]');
+    if (opt) opt.disabled = !allowed;
+  };
+
+  toggle('1', form.dataset.canNotPaid === 'true');
+  toggle('2', form.dataset.canFullyPaid === 'true');
+  toggle('3', form.dataset.canPartialPaid === 'true');
+})();
+
+document.querySelectorAll('.contract-progress-fill').forEach(function (el) {
+  var pct = parseFloat(el.dataset.progress, 10);
+  if (!isNaN(pct)) {
+    el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  }
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Contract Price Breakdown</h1>
+        <a href="{% url 'contract-manage' id=contract.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">
+            Manage Details
+        </a>
+    </div>
+    
+    {% comment %}<div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Description
+                    </th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="price-table" class="bg-white divide-y divide-gray-200">
+                <!-- Data will be populated via JavaScript -->
+            </tbody>
+        </table>
+    </div>{% endcomment %}
+</div>
+<div class="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Transaction
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount (ETB)
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Balance
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="payment-details-body" class="bg-white divide-y divide-gray-200">
+                <!-- Loading state -->
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center">
+                        <div class="flex justify-center items-center space-x-2">
+                            <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="text-gray-600">Loading payment details...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot class="bg-gray-50">
+                <tr id="net-total-row" class="hidden">
+                    <td></td>
+                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                        NET TOTAL
+                    </td>
+                    <td class="px-6 py-3 text-sm font-bold text-gray-900">
+                        <span id="net-total-amount">ETB 0.00</span>
+                    </td>
+                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                        EXPECTED TRANSACTION
+                    </td>
+                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                        <span id="net-owed-amount">ETB 0.00</span>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Elements
+  const tableBody = document.getElementById('payment-details-body');
+  const netTotalRow = document.getElementById('net-total-row');
+  const netTotalAmount = document.getElementById('net-total-amount');
+  const netOwedAmount = document.getElementById('net-owed-amount');
+  let partial = 0.00;
+
+  if (!tableBody || !netTotalRow || !netTotalAmount || !netOwedAmount) {
+    console.error('Required table elements not found in DOM');
+    return;
+  }
+
+  // Safely interpolate contract ID
+  const contractId = "{{ contract.id|default:'' }}";
+  if (!contractId) {
+    showErrorState('No contract selected');
+    return;
+  }
+
+  const apiUrl = "{% url 'contract_calculator_api' contract.id %}";
+
+  // Utility: format currency in ETB
+  const formatCurrency = amount => {
+    return new Intl.NumberFormat('en-ET', {
+      style: 'currency',
+      currency: 'ETB',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
+  // Utility: format a date string
+  const formatDate = dateStr => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
+  };
+
+  // Utility: create a badge span
+  const createBadge = (text, color) => {
+    const palette = {
+      blue: 'bg-blue-100 text-blue-800',
+      yellow: 'bg-yellow-100 text-yellow-800',
+      purple: 'bg-purple-100 text-purple-800',
+      green: 'bg-green-100 text-green-800',
+      red: 'bg-red-100 text-red-800'
+    };
+    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${palette[color] || ''}">${text}</span>`;
+  };
+
+  // Display an error row
+  function showErrorState(message = 'Failed to load payment details') {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="px-6 py-8 text-center">
+          <div class="flex flex-col items-center text-red-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p class="mt-2 font-medium">${message}</p>
+            ${!message.includes('selected') ? `
+              <button onclick="window.location.reload()"
+                      class="mt-4 text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                    clip-rule="evenodd" />
+                </svg>Retry
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>`;
+    netTotalRow.classList.add('hidden');
+  }
+
+  // Append a row to the table
+  function addTableRow({description, type, date, amount, isPositive, balance}) {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-gray-50';
+    tr.innerHTML = `
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${description}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${type}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${date}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}">
+        ${isPositive ? '+' : '-'}${formatCurrency(amount)}
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-right ${balance >= 0 ? 'text-gray-900' : 'text-red-600'}">
+        ${formatCurrency(balance)}
+      </td>`;
+    tableBody.appendChild(tr);
+  }
+
+  // Fetch & render all payment lines
+  async function fetchPaymentData() {
+    try {
+      // loading state
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="5" class="px-6 py-8 text-center">
+            <div class="flex justify-center items-center space-x-2">
+              <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                   viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962
+                         7.962 0 014 12H0c0 3.042 1.135 5.824
+                         3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="text-gray-600">Loading payment details...</span>
+            </div>
+          </td>
+        </tr>`;
+
+      const resp = await fetch(apiUrl);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      const data = await resp.json();
+      tableBody.innerHTML = '';
+
+      let runningBalance = data.base_amount;
+
+      // Base contract
+      addTableRow({
+        description: 'Base Contract Value',
+        type: createBadge('Base', 'blue'),
+        date: formatDate(data.start_date),
+        amount: data.base_amount,
+        isPositive: true,
+        balance: runningBalance
+      });
+
+      // Extras
+      (data.extra_charges || []).forEach((e) => {
+        runningBalance += e.money;
+        addTableRow({
+          description: `Extra: ${e.description}`,
+          type: createBadge('Extra', 'purple'),
+          date: formatDate(e.date),
+          amount: e.money,
+          isPositive: true,
+          balance: runningBalance
+        });
+      });
+
+      // Discounts
+      (data.discounts || []).forEach((d) => {
+        runningBalance -= d.discount_money;
+        addTableRow({
+          description: `Discount: ${d.description}`,
+          type: createBadge('Discount', 'green'),
+          date: formatDate(d.date),
+          amount: d.discount_money,
+          isPositive: false,
+          balance: runningBalance
+        });
+      });
+
+      // Contract total (base + extras − discounts)
+      const contractTotal = data.net_total;
+      partial = data.amount_paid ?? 0;
+
+      // Partial payments (reduce remaining balance)
+      (data.partial_payments || []).forEach((p, i) => {
+        runningBalance -= p.amount;
+        addTableRow({
+          description: `Partial Payment #${i+1}`,
+          type: createBadge('Payment', 'yellow'),
+          date: formatDate(p.date),
+          amount: p.amount,
+          isPositive: false,
+          balance: runningBalance
+        });
+      });
+
+      // Show net total and remaining balance
+      netTotalAmount.textContent = formatCurrency(contractTotal);
+      const owed = data.balance_due ?? (contractTotal - partial);
+      netOwedAmount.textContent = formatCurrency(owed);
+      netOwedAmount.className = owed >= 0 ? 'text-green-500' : 'text-red-500';
+      netTotalRow.classList.remove('hidden');
+
+    } catch (err) {
+      console.error('fetchPaymentData error', err);
+      showErrorState('Error loading contract details. Please try again.');
+    }
+  }
+
+  // Kick it off
+  fetchPaymentData();
+});
+</script>
+{% endblock %}

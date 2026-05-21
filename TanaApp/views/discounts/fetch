@@ -1,0 +1,14 @@
+# Create discount for contract 5
+POST /api/discounts/contract/5/
+{
+    "time": 12,
+    "discount_type": "one",
+    "discount_money": 1500.00,
+    "description": "Loyalty discount"
+}
+
+# Update discount
+PATCH /api/discounts/42/
+{
+    "discount_money": 2000.00
+}

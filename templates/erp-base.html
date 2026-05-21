@@ -1,0 +1,19 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+{% include 'includes/modules/head.html' %}
+<body class="theme-indigo">
+{% include 'includes/modules/pre-loader.html' %}
+{% include 'includes/modules/page-overlay.html' %}
+{% include 'includes/modules/search-engine.html' %}
+{% include 'includes/modules/nav-bar.html' %}
+{% include 'includes/modules/side-bar.html' %}
+<section class="content">
+    <div class="container-fluid">
+        {% block dash_content %}
+        {% endblock dash_content %}
+    </div>
+</section>
+{% include 'includes/modules/scripts.html' %}
+</body>
+</html>

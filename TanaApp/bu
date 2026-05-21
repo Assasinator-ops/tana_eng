@@ -1,0 +1,566 @@
+from rest_framework import generics, status, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
+
+from django.db import transaction
+from django.contrib.auth.hashers import make_password
+from django.utils.timezone import now, timedelta
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
+
+from .serializers import (
+    OwnerSerializer, BuildingSerializer, BuildingElevatorSerializer,
+    BuildingContractSerializer, ContractSerializer, ContractCreateSerializer,
+    EmployeeSerializer, ElevatorSerializer, ElevatorCreateSerializer,
+    PartialPaymentSerializer, WarrantySerializer, ExtraPaymentSerializer,
+    DiscountSerializer
+)
+
+'''from .models import (
+    DbDiscount, Warranty, Elevator, Building, Contract,
+    PartialPayment, ExtraPayment, DbElevator, DbWarranty,
+    Employee, Owner, ContractElevator
+)'''
+
+from .models import (
+    DbDiscount, DbWarranty, DbElevator, DbBuilding, DbContract,
+    DbPartialPayment, DbExtraPayment, DbOwner, DbEmployee
+)
+
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+
+
+# CUSTOM DRF PERMISSIONS #############################
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user and request.user.is_staff
+
+
+# START OF OWNER VIEW #################################
+# Create Owner
+class CreateOwnerView(generics.CreateAPIView):
+    queryset = Owner.objects.all()
+    serializer_class = OwnerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        if Owner.objects.filter(email=self.request.data.get('email')).exists():
+            return Response({'detail': 'Already exists'}, status=status.HTTP_409_CONFLICT)
+        serializer.save()
+
+
+# Retrieve Single Owner
+class RetrieveOwnerView(generics.RetrieveAPIView):
+    queryset = Owner.objects.all()
+    serializer_class = OwnerSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+
+# List All Owners with Sorting
+class ListOwnersView(generics.ListAPIView):
+    serializer_class = OwnerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        sort = self.request.query_params.get('sort', 'id')
+        what = self.request.query_params.get('what', '1')
+        order = "" if what == "1" else "-"
+        queryset = Owner.objects.all().order_by(f"{order}{sort}")
+        if not queryset.exists():
+            return Response({'detail': 'No owner yet.'}, status=status.HTTP_404_NOT_FOUND)
+        return queryset
+
+
+# Update Owner
+class UpdateOwnerView(generics.UpdateAPIView):
+    queryset = Owner.objects.all()
+    serializer_class = OwnerSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+
+# Search Owner by Name
+class SearchOwnerView(generics.ListAPIView):
+    serializer_class = OwnerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        name = self.request.query_params.get('name', '')
+        queryset = Owner.objects.filter(
+            Q(name__icontains=name)
+        )
+        if not queryset.exists():
+            return Response({'detail': 'Owner not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return queryset
+
+
+# Delete Owner
+class DeleteOwnerView(generics.DestroyAPIView):
+    queryset = Owner.objects.all()
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.buildings.exists():
+            return Response({'detail': 'Owner cannot be deleted because it has associated buildings'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        self.perform_destroy(instance)
+        return Response({'message': 'Owner deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+# END OF OWNER VIEW ###################################
+
+
+# START OF BUILDING VIEW ###################################
+class CreateBuildingView(generics.CreateAPIView):
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class GetBuildingView(generics.ListAPIView):
+    serializer_class = BuildingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        name = self.kwargs.get('name')
+        return Building.objects.filter(name=name)
+
+
+class GetCustomerBuildingsView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        buildings = Building.objects.filter(owner_id=id).select_related('owner')
+        if not buildings.exists():
+            return Response({"detail": "No building yet."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = [{
+            "id": b.id,
+            "name": b.name,
+            "address": b.address,
+            "phone1": b.phone1,
+            "phone2": b.phone2,
+            "phone3": b.phone3,
+            "email1": b.email1,
+            "owner_name": b.owner.name
+        } for b in buildings]
+        return Response(data)
+
+
+class GetAllBuildingsView(generics.ListAPIView):
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class GetSingleBuildingView(generics.RetrieveAPIView):
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+
+class UpdateBuildingView(generics.UpdateAPIView):
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+
+class GetBuildingElevatorsView(generics.ListAPIView):
+    serializer_class = BuildingElevatorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Elevator.objects.select_related('building').all()
+
+
+class GetBuildingContractsView(generics.ListAPIView):
+    serializer_class = BuildingContractSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Contract.objects.filter(Q(payed=1) | Q(payed=2)).select_related('elevator__building')
+
+
+class GetBuildingsOnWarrantyView(generics.ListAPIView):
+    serializer_class = BuildingContractSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Warranty.objects.filter(end_date__gt=date.today()).select_related('elevator__building')
+
+
+class SearchBuildingView(generics.ListAPIView):
+    serializer_class = BuildingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        name = self.request.query_params.get('name', '')
+        search_type = self.request.query_params.get('type', 'building')
+
+        if search_type == 'building':
+            return Building.objects.filter(Q(name__icontains=name))
+        elif search_type == 'name':
+            return Owner.objects.filter(Q(name__icontains=name))
+        elif search_type == 'eid':
+            return Elevator.objects.filter(Q(id__icontains=name))
+        return Building.objects.none()
+
+# END OF BUILDING ############################
+
+
+# START OF ELEVATOR VIEW ############################
+class ElevatorCreateView(generics.CreateAPIView):
+    queryset = DbElevator.objects.all()
+    serializer_class = ElevatorCreateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        elevator = serializer.save()
+
+        # Creating warranty
+        warranty_duration = int(request.data.get("id", 0))
+        DbWarranty.objects.create(
+            start_date=request.data.get("start_date"),
+            end_date=datetime.strptime(request.data.get("start_date"), '%Y-%m-%d').date() + relativedelta(
+                months=warranty_duration),
+            elevator=elevator
+        )
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ElevatorListView(generics.ListAPIView):
+    queryset = DbElevator.objects.all()
+    serializer_class = ElevatorSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class ElevatorDetailView(generics.RetrieveAPIView):
+    queryset = DbElevator.objects.all()
+    serializer_class = ElevatorSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "id"
+
+
+class ElevatorUpdateView(generics.UpdateAPIView):
+    queryset = DbElevator.objects.all()
+    serializer_class = ElevatorCreateSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "id"
+
+    def update(self, request, *args, **kwargs):
+        elevator = get_object_or_404(DbElevator, id=kwargs.get("id"))
+        serializer = self.get_serializer(elevator, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        # Updating warranty
+        warranty = get_object_or_404(DbWarranty, elevator=elevator)
+        warranty.end_date = datetime.strptime(request.data.get("start_date"), '%Y-%m-%d').date() + relativedelta(
+            months=int(request.data.get("id", 0)))
+        warranty.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ElevatorSearchView(generics.ListAPIView):
+    serializer_class = ElevatorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        query = self.request.query_params.get("id", "")
+        return DbElevator.objects.filter(id__icontains=query)
+
+
+class ElevatorCheckView(generics.ListAPIView):
+    serializer_class = ElevatorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        building_id = self.kwargs.get("building_id")
+        return DbElevator.objects.filter(building_id=building_id, contractelevator__isnull=True)
+
+
+# END OF ELEVATOR VIEW ############################
+
+
+# START OF CONTRACT VIEW ############################
+# Contract Create View
+class ContractCreateView(generics.CreateAPIView):
+    queryset = DbContract.objects.all()
+    serializer_class = ContractCreateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+
+# Contract List View
+class ContractListView(generics.ListAPIView):
+    queryset = DbContract.objects.all()
+    serializer_class = ContractSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+# Contract Detail View
+class ContractDetailView(generics.RetrieveAPIView):
+    queryset = DbContract.objects.all()
+    serializer_class = ContractSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+
+# Contract Update View
+class ContractUpdateView(generics.UpdateAPIView):
+    queryset = DbContract.objects.all()
+    serializer_class = ContractSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+    lookup_field = 'id'
+
+# Contract Delete View
+class ContractDeleteView(generics.DestroyAPIView):
+    queryset = DbContract.objects.all()
+    serializer_class = ContractSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = 'id'
+
+# Expired Contracts View
+class ExpiredContractsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        expired_contracts = DbContract.objects.filter(end_date__lt=date.today(), payed__ne=3)
+        serializer = ContractSerializer(expired_contracts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# END Of Contract Elevator #############################
+
+
+# START OF Employee #############################
+# Create Employee
+class EmployeeCreateView(generics.CreateAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def perform_create(self, serializer):
+        serializer.save(password=make_password(self.request.data['password']))
+
+# List All Employees
+class EmployeeListView(generics.ListAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+# Retrieve Employee by Email
+class EmployeeDetailView(generics.RetrieveAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "email"
+
+# Update Employee
+class EmployeeUpdateView(generics.UpdateAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = "id"
+
+# END OF Employee ###################################
+
+
+# START OF Extra Payments #############################
+# Views
+class ExtraPaymentListCreateView(generics.ListCreateAPIView):
+    queryset = ExtraPayment.objects.all()
+    serializer_class = ExtraPaymentSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ExtraPaymentRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = ExtraPayment.objects.all()
+    serializer_class = ExtraPaymentSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# END OF Extra Payments ###########################################
+
+
+# START OF Partial Payment #############################
+class PartialPaymentListCreateView(generics.ListCreateAPIView):
+    queryset = PartialPayment.objects.all()
+    serializer_class = PartialPaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            raise ValidationError({"detail": str(e)})
+
+
+class PartialPaymentRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = PartialPayment.objects.all()
+    serializer_class = PartialPaymentSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    lookup_field = "id"
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        amt = request.data.get("amount", 0)
+        total = request.data.get("total", instance.total)
+
+        if amt + instance.amount > instance.total:
+            raise ValidationError("Payment cannot exceed total amount.")
+
+        with transaction.atomic():
+            instance.amount += amt
+            instance.total = total
+            instance.save()
+
+            contract = get_object_or_404(Contract, id=instance.contract.id)
+            if contract.payed != "two":
+                contract.payed = "two"
+                contract.save()
+
+        return Response(PartialPaymentSerializer(instance).data, status=status.HTTP_200_OK)
+
+
+# END OF Partial Payment #############################
+
+
+# START OF Elevator Warranty #############################
+# Create and List Warranties
+class WarrantyListCreateView(generics.ListCreateAPIView):
+    queryset = Warranty.objects.all()
+    serializer_class = WarrantySerializer
+    permission_classes = [IsAuthenticated]
+
+
+# Retrieve a Single Warranty by ID
+class WarrantyRetrieveView(generics.RetrieveAPIView):
+    queryset = Warranty.objects.all()
+    serializer_class = WarrantySerializer
+    permission_classes = [IsAuthenticated]
+
+
+# Get Warranties Expiring in the Next 30 Days
+class ExpiringWarrantyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        threshold_date = now() + timedelta(days=30)
+        warranties = Warranty.objects.filter(end_date__lte=threshold_date)
+        serializer = WarrantySerializer(warranties, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Get Active Warranties (Still Valid)
+class ActiveWarrantyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        warranties = Warranty.objects.filter(end_date__gt=now())
+        serializer = WarrantySerializer(warranties, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Get Expired Warranties
+class ExpiredWarrantyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        warranties = Warranty.objects.filter(end_date__lt=now())
+        serializer = WarrantySerializer(warranties, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Get Warranties That Are Almost Expired (Within 30 Days & No Full Payment)
+class WarrantyAlmostExpiredListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        threshold_date = now() + timedelta(days=30)
+        warranties = Warranty.objects.filter(
+            end_date__lte=threshold_date
+        ).exclude(
+            contract__payed=3
+        )
+        serializer = WarrantySerializer(warranties, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# END OF Elevator Warranty #############################
+
+
+# START OF Payment Discount #############################
+# List & Create Discounts
+class DiscountListCreateView(generics.ListCreateAPIView):
+    queryset = DbDiscount.objects.all()
+    serializer_class = DiscountSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        contract_id = self.kwargs.get('contract_id')
+        discounts = DbDiscount.objects.filter(contract_id=contract_id)
+        if not discounts.exists():
+            raise NotFound(detail="No discount yet", code=HTTP_404_NOT_FOUND)
+        return discounts
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            return Response({'detail': "Already exists"}, status=HTTP_409_CONFLICT)
+
+# Retrieve & Update a Discount
+class DiscountRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = DbDiscount.objects.all()
+    serializer_class = DiscountSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        discount_id = self.kwargs.get('pk')
+        discount = get_object_or_404(DbDiscount, id=discount_id)
+        return discount
+
+# END OF DISCOUNT ##############################
+
+# MODEL BU
+'''
+class DBContractElevator(models.Model):
+    id = models.IntegerField(primary_key=True)
+    contract = models.ForeignKey(DbContract, on_delete=models.CASCADE, related_name='contractElevator')
+    elevator = models.ForeignKey(DbElevator, on_delete=models.CASCADE, related_name='elevatorC')
+
+    class Meta:
+        db_table = 'contractElevator'
+'''

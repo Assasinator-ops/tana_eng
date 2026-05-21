@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Elevators Dashboard</h2>
+        <a href="{% url 'elevator-add' %}" class="bg-blue-600 text-white px-4 py-2 rounded">Add New Elevator</a>
+    </div>
+    <div class="bg-white shadow rounded-lg mb-8 p-4 overflow-x-auto">
+      <h2 class="text-xl font-semibold mb-4">Registered Elevators</h2>
+        <table id="elevatorTable" class="datatable min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr class="bg-gray-100 text-left">
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission Number</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for elevator in elevators %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <a href="{% if elevator.id %}{% url 'elevator-detail-page' elevator.id %}{% else %}#{% endif %}" class="hover:underline">{{ elevator.name }}</a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.commissionnumber }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.model }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.Total }} ETB</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ elevator.building_name }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block splash_script %}
+        // Hide splash after 2 seconds
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(function() {
+                document.getElementById("splash").classList.add("hidden");
+                // document.getElementById("content").style.display = "block";
+                document.getElementById("content").classList.remove("hidden");
+            }, 1000);
+        });
+{% endblock %}
+{% block splash_screen %}
+<!-- Splash screen -->
+<div id="splash">
+  <h1 class="text-blue-500">Tana Engineering PLC</h1>
+  <p class="text-gray-400 animate-pulse"><i>Your source of reliability</i></p>
+</div>
+{% endblock %}
+{% block splash_behaviour %} hidden{% endblock %}

@@ -1,0 +1,13 @@
+# Create initial partial payment
+POST /api/partial-payments/
+{
+    "amount": 5000.00,
+    "total": 20000.00,
+    "contract_id": 1
+}
+
+# Add payment
+PUT /api/partial-payments/1/update/
+{
+    "amount": 3000.00
+}

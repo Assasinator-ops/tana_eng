@@ -1,0 +1,4 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.button { @include center; padding:.5rem 1rem; border-radius:$radius; background:$primary; color:#fff; }

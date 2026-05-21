@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% load rest_framework %}
+{% block content %}
+  <div class="max-w-7xl mx-auto">
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <a href="{% url 'owner-list' %}" class="bg-white shadow rounded-lg p-5 text-center block hover:shadow-lg transition">
+        <h3 class="text-sm font-medium text-gray-600 uppercase">Owners</h3>
+        <p class="mt-2 text-2xl font-semibold text-gray-800">{{ data.owners.count }}</p>
+      </a>
+      <a href="{% url 'building-list' %}" class="bg-white shadow rounded-lg p-5 text-center block hover:shadow-lg transition">
+        <h3 class="text-sm font-medium text-gray-600 uppercase">Buildings</h3>
+        <p class="mt-2 text-2xl font-semibold text-gray-800">{{ data.buildings.count }}</p>
+      </a>
+      <a href="{% url 'contract-list' %}" class="bg-white shadow rounded-lg p-5 text-center block hover:shadow-lg transition">
+        <h3 class="text-sm font-medium text-gray-600 uppercase">Active Contracts</h3>
+        <p class="mt-2 text-2xl font-semibold text-gray-800">{{ data.active_contracts.count }}</p>
+      </a>
+      <a href="{% url 'warranty-list' %}" class="bg-white shadow rounded-lg p-5 text-center block hover:shadow-lg transition">
+        <h3 class="text-sm font-medium text-gray-600 uppercase">Expired Warranties</h3>
+        <p class="mt-2 text-2xl font-semibold text-gray-800">{{ data.warranties.count }}</p>
+      </a>
+      <a href="{# % url 'partialpayment-list' % #}" class="bg-white shadow rounded-lg p-5 text-center block hover:shadow-lg transition">
+        <h3 class="text-sm font-medium text-gray-600 uppercase">Pending Payments</h3>
+        <p class="mt-2 text-2xl font-semibold text-gray-800">{{ data.pending_payments.count }}</p>
+      </a>
+    </div>
+
+    <!-- Data Tables -->
+    <!-- Owners Table -->
+    <div class="bg-white shadow rounded-lg mb-8 p-6 overflow-x-auto">
+      <h2 class="text-xl font-semibold mb-4">Owners</h2>
+      <table class="datatable min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone 1</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone 2</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for owner in data.owners %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ owner.id }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ owner.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ owner.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ owner.phone1 }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ owner.phone2|default:'–' }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ owner.address }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Buildings Table -->
+    <div class="bg-white shadow rounded-lg mb-8 p-6 overflow-x-auto">
+      <h2 class="text-xl font-semibold mb-4">Buildings</h2>
+      <table class="datatable min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for building in data.buildings %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.id }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><a href="{% url 'buildings-detail-page' building.id %}" class="text-gray-800 hover:underline">{{ building.name }}</a></td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.address }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.owner.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ building.email1 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Active Contracts Table -->
+    <div class="bg-white shadow rounded-lg mb-8 p-6 overflow-x-auto">
+      <h2 class="text-xl font-semibold mb-4">Active Contracts</h2>
+      <table class="datatable min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for contract in data.active_contracts %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ forloop.counter }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><a href="{% url 'contract_calculator' contract.id %}" class="hover:underline">{{ contract.building.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contract.start_date|date:"Y-m-d" }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contract.end_date|date:"Y-m-d" }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ contract.get_payed_display }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">ETB {{ contract.total.total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Expired Warranties Table -->
+    <div class="bg-white shadow rounded-lg mb-8 p-6 overflow-x-auto">
+      <h2 class="text-xl font-semibold mb-4">Expired Warranties</h2>
+      <table class="datatable min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Elevator</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for warranty in data.warranties %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ forloop.counter }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><a href="{% url 'elevator-detail-page' warranty.elevator.id %}#warranty_contracts" class="hover:underline">{{ warranty.elevator.name }}</a></td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><a href="{% url 'elevator-detail-page' warranty.elevator.building.id %}#warranty_contracts" class="hover:underline">{{ warranty.elevator.building.name }}</a></td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ warranty.start_date|date:"Y-m-d" }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ warranty.end_date|date:"Y-m-d" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pending Payments Table -->
+    <div class="bg-white shadow rounded-lg mb-8 p-6 overflow-x-auto">
+      <h2 class="text-xl font-semibold mb-4">Pending Payments</h2>
+      <table class="datatable min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Start</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for payment in data.pending_payments %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ forloop.counter }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><a href="{% url 'buildings-detail-page' payment.contract.building.id %}" class="hover:underline">{{ payment.contract.building.name }}</a></td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ payment.contract.start_date|date:"Y-m-d" }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">ETB {{ payment.amount }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">ETB {{ payment.total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
+{% block splash_script %}
+        // Hide splash after 2 seconds
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(function() {
+                document.getElementById("splash").classList.add("hidden");
+                // document.getElementById("content").style.display = "block";
+                document.getElementById("content").classList.remove("hidden");
+            }, 1000);
+        });
+{% endblock %}
+{% block splash_screen %}
+<!-- Splash screen -->
+<div id="splash">
+  <h1 class="text-blue-500">Tana Engineering PLC</h1>
+  <p class="text-gray-400 animate-pulse"><i>Your source of reliability</i></p>
+</div>
+{% endblock %}
+{% block splash_behaviour %} hidden{% endblock %}

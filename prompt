@@ -1,0 +1,325 @@
+now make "drf permission and drf class view" for this
+"
+from sqlalchemy.orm.session import Session
+from sqlalchemy.orm import joinedload
+from sqlalchemy import or_, and_, text
+from fastapi import status, HTTPException
+
+from schemas import ContractBase, DiscountBase, ExtraBase, ConctractElevator, CotractCreateBase
+from db.models import DBPartialPyment, DbContract, DbElevator, DbDiscount, DbExtra, DBContractElevator, DbBuilding
+import datetime
+from datetime import date
+from dateutil.relativedelta import relativedelta
+
+
+
+def create(db: Session, req: CotractCreateBase):
+    try:
+        # contract
+        new_contract = DbContract(
+            start_date = req.start_date,
+            end_date =  req.end_date + relativedelta(months=+req.paytime),
+            paytime =  req.paytime,
+            payed = 'one',
+            building_id = req.building_id
+        )
+        db.add(new_contract)
+        db.commit()
+        db.refresh(new_contract)
+
+        total = 0.0
+        for eid in req.elevator_id:
+            elevator = db.query(DbElevator).with_entities(DbElevator.Total)\
+                        .filter(DbElevator.id ==eid).scalar()
+            total+= elevator
+
+
+        # add new elevator contract
+        id = new_contract.id
+        # contract_ids = req.contract_id
+        print('elevator id')
+        print(req.elevator_id)
+        print(req.elevator_id.count)
+        elevator_ids = req.elevator_id
+
+        for  elevator_id in elevator_ids:
+            print('for')
+            print(elevator_id)
+            new_Elevator_Contract = DBContractElevator(
+                contract_id = id,
+                elevator_id = elevator_id
+                )
+            db.add(new_Elevator_Contract)
+            db.commit()
+            db.refresh(new_Elevator_Contract)
+
+        d = (total * req.time) / 100
+        print('hhhhhhhhhhhhhhhh')
+        print(d)
+
+        # discount
+        new_dis = DbDiscount(
+            time = req.time,
+            discount_type = 'one',
+            discount_money = d,
+            description = 'contract time discount',
+            description2 = 'contract time discount',
+            contract_id = new_contract.id
+        )
+        db.add(new_dis)
+        db.commit()
+        db.refresh(new_dis)
+        # return new_dis
+        print('dis')
+
+        new_partial = DBPartialPyment(
+            amount = 0,
+            total = 0,
+            contract_id= new_contract.id
+        )
+        db.add(new_partial)
+        db.commit()
+        db.refresh(new_partial)
+
+        # extra
+        # new_extra = DbExtra(
+        #     money = 0,
+        #     discription = 'Extra cost',
+        #     discription1 = 'Extra cost',
+        #     contract_id = new_contract.id
+        #     )
+        # db.add(new_extra)
+        # db.commit()
+        # db.refresh(new_extra)
+        return req
+    except Exception as e:
+                print('------')
+                print(req.elevator_id)
+                print(e)
+                # print(new_contract)
+                # print(new_contract.elevator_id)
+                raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="oready exist",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+
+# get all
+def getAll(db: Session):
+    contract = db.query(DbContract).filter(or_(DbContract.payed ==  1, DbContract.payed == 2)).all()
+    if not contract:
+        raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "No contract yet",
+
+        )
+    return contract
+
+
+# get paied  contract
+def getContract(id: str, db: Session):
+    # contract = db.query(DbContract)\
+    #     .filter(and_(DbContract.building_id ==  id, DbContract.payed == 3)).all()
+    contract = db.query(DbContract) \
+    .filter(DbContract.building_id == id, DbContract.payed == 3) \
+    .options(joinedload(DbContract.contractElevator).load_only(DBContractElevator.elevator_id)) \
+    .all()
+
+    if not contract:
+         raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "No compleated contract yet!",
+
+        )
+    print('=============================================================')
+
+    return contract
+
+
+
+# get not paied elvator
+def getForElevator(id: int, db: Session):
+    contract = db.query(DbContract)\
+        .filter(and_(DbContract.building_id ==  id, or_(DbContract.payed ==  1, DbContract.payed == 2))).all()
+        # .filter(or_(DbContract.payed ==  1, DbContract.payed == 2, and_(DbContract.elevator_id ==  id))).all()
+        # .filter(DbContract.payed == 1 | DbContract.payed == 2).all()
+        # (DbContract.payed == 2).all()
+    print('contract ===')
+
+    if not contract:
+            raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "No contract yet!",
+
+        )
+
+    return contract
+
+
+# get  paied elvator
+def getUnpaiedElevator(id: str, db: Session):
+    contract = db.query(DbContract).filter(DbContract.elevator_id ==  id).filter(DbContract.payed == 3).all()
+    if not contract:
+            raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "No contract yet",
+
+        )
+    return contract
+
+
+# update
+# from db import db_partialpayment
+
+def update(id: int, db: Session):
+    contract = db.query(DbContract).filter(DbContract.id == id)
+    if contract.count() == 0:
+            raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "Not found",
+
+        )
+    try:
+        contract.update({
+                DbContract.payed: 'Three',
+
+            })
+        db.commit()
+        return contract.first()
+
+    except Exception as e:
+        print('pppppppppppppppppp')
+        print(e)
+        print('pppppppppppppppppp')
+        raise HTTPException(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            detail= "error",
+        )
+
+
+def updateContract(id: int, req: ContractBase, db: Session):
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
+    contract = db.query(DbContract).filter(DbContract.id == id)
+    print(contract.count())
+    if contract.count() == 0:
+            raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "Not found",
+
+        )
+    try:
+        dt_start_date = datetime.fromisoformat(req.end_date)
+        new_date = dt_start_date + relativedelta(months=+req.paytime)
+        contract.update({
+                DbContract.start_date: req.start_date,
+                DbContract.end_date: new_date,
+                DbContract.paytime: req.paytime,
+
+            })
+        db.commit()
+        return req
+
+    except Exception as e:
+        print('pppppppppppppppppp')
+        print(e)
+        print('pppppppppppppppppp')
+        raise HTTPException(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            detail= "error",
+        )
+
+
+# partial
+
+def partail(id: int, req: ContractBase, db: Session):
+    contract = db.query(DbContract).filter(DbContract.id == id)
+    if contract.count() == 0:
+            raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "Not found",
+
+        )
+    try:
+        contract.update({
+                DbContract.payed: req.payed,
+                })
+        db.commit()
+        return contract.first()
+
+    except Exception as e:
+        print('pppppppppppppppppp')
+        print(e)
+        return HTTPException(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            detail= e,
+        )
+
+
+
+def getTotal(buldingId, contractId, db: Session):
+    elevator = db.query(DbElevator).with_entities(DbElevator.Total).filter(DbElevator.building_id == buldingId).all()
+    disocunt = db.query(DbDiscount).with_entities(DbDiscount.discount_money).filter(DbDiscount.contract_id == contractId).all()
+    extra = db.query(DbExtra).with_entities(DbExtra.money).filter(DbExtra.contract_id == contractId).all()
+    elevators = db.query(DBContractElevator).with_entities(DBContractElevator.elevator_id).filter(DBContractElevator.contract_id == contractId).all()
+
+    e = 0.0
+    d = 0.0
+    ex = 0.0
+
+    try:
+        if  elevator is None or  disocunt is None or extra is None:
+            print(elevator)
+            print(disocunt)
+            print(extra)
+            return HTTPException(
+                status_code= status.HTTP_400_BAD_REQUEST,
+                detail= "something went wrong",
+            )
+
+        # d = list(sum(disocunt, ()))
+        # ex = list(sum(extra, ()))
+        el = sum(list(*zip(*elevator)))
+        d = sum(list(*zip(*disocunt)))
+        ex = sum(list(*zip(*extra)))
+
+        elevator_list = [elevator[0] for elevator in elevators]
+
+        # x = elevator + disocunt + extra
+        x = el  + ex - d
+        return {
+            "Total": x,
+            'eid': elevator_list
+        }
+    except Exception as e:
+     print('00000000000000000000000000000000')
+     print(e)
+
+from db.models import DbElevator
+from db.models import DbBuilding
+from sqlalchemy.orm import aliased
+def getExpired(db: Session):
+
+    #  sql = text("SELECT c.start_date, c.end_date, c.paytime, e.name, e.Total, e.id, b.name \
+    #             FROM  contract as c INNER JOIN elevator AS e ON c.elevator_id = e.id \
+    #             INNER JOIN building b on e.building_id = b.id WHERE c.end_date < curdate() AND c.payed != 3")
+     sql = text("SELECT c.start_date, c.end_date, c.paytime, e.name, e.Total, e.id, b2.name\
+                FROM  contract as c INNER JOIN building b2 on c.building_id = b2.id\
+                INNER JOIN elevator e on b2.id = e.building_id WHERE c.end_date < curdate() AND c.payed != 3")
+
+     expired = db.execute(sql).fetchall()
+
+     if not expired:
+             raise HTTPException(
+            status_code= status.HTTP_404_NOT_FOUND,
+            detail= "No expired contract",
+        )
+     x = [{
+          'startdate': sdate, 'enddate': edate, 'paytime':ptime,
+            'elevatorname': ename,'elevatortotal': etotal, 'eid': id, 'buildingname': bname}
+                for sdate, edate, ptime, ename, etotal, id, bname in expired
+     ]
+     return x
+
+" make both url and drf class based view with drf permission.

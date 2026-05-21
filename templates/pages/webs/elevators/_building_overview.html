@@ -1,0 +1,78 @@
+<section class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+  <header class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 mb-3">
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Elevator context</p>
+      <h1 class="text-lg font-bold text-slate-900">{{ elevator.name }}
+        <span class="font-normal text-slate-500">· {{ elevator.id }}</span>
+      </h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-1.5">
+      {% if has_active_warranty %}
+        <span class="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 ring-1 ring-emerald-600/20">Warranty active</span>
+      {% else %}
+        <span class="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-800 ring-1 ring-rose-600/20">No active warranty</span>
+      {% endif %}
+      <a href="{% url 'buildings-detail-page' id=building.id %}"
+         class="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 ring-1 ring-indigo-600/20 hover:bg-indigo-100">
+        Open building
+      </a>
+    </div>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+    <div class="lg:col-span-7 rounded-lg border border-slate-200 bg-white p-3 shadow-sm border-l-[3px] border-l-indigo-500">
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 mb-1">Building</p>
+      <p class="text-sm font-bold text-slate-900">{{ building.name }}</p>
+      {% if building.owner %}
+        <p class="text-xs text-slate-600 mt-0.5">
+          Owner:
+          <a href="{% url 'owner-detail-page' pk=building.owner.id %}" class="text-indigo-600 hover:underline">{{ building.owner.name }}</a>
+        </p>
+      {% endif %}
+      <p class="text-xs text-slate-500 mt-2 leading-relaxed">{{ building.address }}</p>
+      <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        <div><dt class="text-slate-400 inline">Phone </dt><dd class="text-slate-700 inline">{{ building.phone1 }}</dd></div>
+        {% if building.phone2 %}<div><dt class="text-slate-400 inline">Alt </dt><dd class="text-slate-700 inline">{{ building.phone2 }}</dd></div>{% endif %}
+        <div class="col-span-2"><dt class="text-slate-400 inline">Email </dt><dd class="text-slate-700 inline">{{ building.email1 }}</dd></div>
+        {% if building.rep_name %}
+        <div class="col-span-2"><dt class="text-slate-400 inline">Rep </dt><dd class="text-slate-700 inline">{{ building.rep_name }}{% if building.rep_phone %} · {{ building.rep_phone }}{% endif %}</dd></div>
+        {% endif %}
+      </dl>
+    </div>
+
+    <div class="lg:col-span-5 rounded-lg border border-slate-200 bg-white p-3 shadow-sm border-l-[3px] border-l-sky-500">
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-sky-600 mb-1">This elevator</p>
+      <dl class="grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs">
+        <div><dt class="text-slate-400">Model</dt><dd class="font-medium text-slate-800">{{ elevator.model }}</dd></div>
+        <div><dt class="text-slate-400">Commission</dt><dd class="font-medium text-slate-800 truncate" title="{{ elevator.commissionnumber }}">{{ elevator.commissionnumber }}</dd></div>
+        <div><dt class="text-slate-400">Stops</dt><dd class="font-medium text-slate-800">{{ elevator.number_of_stops }}</dd></div>
+        <div><dt class="text-slate-400">Total</dt><dd class="font-semibold text-sky-800">ETB {{ elevator.Total|floatformat:2 }}</dd></div>
+        <div class="col-span-2"><dt class="text-slate-400">Registered</dt><dd class="text-slate-700">{{ elevator.registerd_date|date:"M j, Y" }}</dd></div>
+        <div class="col-span-2"><dt class="text-slate-400">Started</dt><dd class="text-slate-700">{{ elevator.started_date|date:"M j, Y" }}</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3" aria-label="Summary metrics">
+    <div class="rounded-md border border-slate-200 bg-white px-2.5 py-2 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase text-slate-500">Contracts</p>
+      <p class="text-lg font-bold text-slate-900">{{ contract_count }}</p>
+      <p class="text-[10px] text-slate-400">active</p>
+    </div>
+    <div class="rounded-md border border-rose-200 bg-rose-50/60 px-2.5 py-2 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase text-rose-600">Expired</p>
+      <p class="text-lg font-bold text-rose-800">{{ expired_contracts_count }}</p>
+      <p class="text-[10px] text-rose-600/80">contracts</p>
+    </div>
+    <div class="rounded-md border border-amber-200 bg-amber-50/60 px-2.5 py-2 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase text-amber-700">Expiring</p>
+      <p class="text-lg font-bold text-amber-900">{{ expiring_soon_count }}</p>
+      <p class="text-[10px] text-amber-700/80">within 5 days</p>
+    </div>
+    <div class="rounded-md border border-violet-200 bg-violet-50/60 px-2.5 py-2 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase text-violet-600">Warranties</p>
+      <p class="text-lg font-bold text-violet-900">{{ warranty_count }}</p>
+      <p class="text-[10px] text-violet-600/80">tracked here</p>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,18 @@
+:root{
+  /* Theme tokens (edit to customize) */
+  --color-primary: #3b82f6;
+  --color-secondary: #8b5cf6;
+  --color-accent: #22c55e;
+  --color-muted: #6b7280;
+  --radius: 0.5rem;
+  --shadow: 0 10px 15px rgba(0,0,0,.1);
+  --ring: 0 0 0 3px rgba(59,130,246,.33);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --color-primary: #60a5fa;
+    --color-secondary: #a78bfa;
+    --color-accent: #4ade80;
+    --color-muted: #9ca3af;
+  }
+}
