@@ -6,7 +6,7 @@ from .models import (
     UserType, DbUser, DbOwner, DbBuilding, ElevatorStatus, DbElevator,
     DbBuildingManager, DiscountType, DbDiscount, DbExtra, DbMessage, DbWarranty,
     ContratE, DbContract, DbBuildingStatus, DBPartialPyment,
-    DbTotal, DbExpense, GlobalSettings, PersonalizedSettings
+    DbTotal, TotalCorrectionLog, DbExpense, GlobalSettings, PersonalizedSettings
 )
 
 @admin.register(DbUser)
@@ -73,6 +73,14 @@ class DBPartialPymentAdmin(admin.ModelAdmin):
 @admin.register(DbTotal)
 class DbTotalAdmin(admin.ModelAdmin):
     list_display = ('id', 'total', 'is_Actiave', 'contract')
+
+
+@admin.register(TotalCorrectionLog)
+class TotalCorrectionLogAdmin(admin.ModelAdmin):
+    list_display = ('id', 'created_at', 'contract', 'reason', 'previous_total', 'new_total', 'delta')
+    list_filter = ('reason',)
+    search_fields = ('contract__id', 'detail')
+    readonly_fields = ('created_at', 'contract', 'reason', 'previous_total', 'new_total', 'delta', 'detail')
 
 @admin.register(DbExpense)
 class DbExpenseAdmin(admin.ModelAdmin):

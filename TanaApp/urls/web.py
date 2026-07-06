@@ -4,6 +4,7 @@ from TanaApp.views.system.dashboard.dash_views import IndexView, DashboardView, 
 from TanaApp.views.buildings.buildings_views import BuildingDashboardView, BuildingAddView, BuildingDetailView, AddElevatorForBuildingAPIView
 from TanaApp.views.elevators.elevators_views import ElevatorDashboardView, ElevatorAddView, ElevatorDetailView, AddElevatorToContractView
 from TanaApp.views.contracts.contracts_views import contract_dashboard, ContractCalculatorView, ContractManageView
+from TanaApp.views.contracts.contract_delete_views import ContractSoftDeleteView, ContractScarDeleteView
 from TanaApp.views.notifications.notifications_views import NotificationListView
 from TanaApp.views.settings.settings_views import SettingsView
 
@@ -29,6 +30,10 @@ urlpatterns = [
     path('contracts/dashboard/<int:building_id>/', contract_dashboard, name='contract-dashboard'),
     path('contracts/<int:id>/calculator/', ContractCalculatorView.as_view(), name='contract_calculator'),
     path('contracts/<int:id>/manage/', ContractManageView.as_view(), name='contract-manage'),
+
+    path('contracts/<int:id>/delete/', ContractSoftDeleteView.as_view(), name='contract-soft-delete'),
+    path('contracts/scars/<int:scar_id>/delete/', ContractScarDeleteView.as_view(), name='contract-scar-delete'),
+
 
     path('notifications/', NotificationListView.as_view(), name='notifications-list'),
 

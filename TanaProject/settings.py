@@ -48,7 +48,15 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
-    ]
+    ],
+    # Browser-session auth for the manage page (and any other AJAX call from a
+    # logged-in user). This was the only thing missing — DRF needs an
+    # authentication class list, otherwise IsAuthenticated returns
+    # "Authentication credentials were not provided." for every request.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
 }
 
 MIDDLEWARE = [
@@ -154,3 +162,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging configuration with database handler
+from TanaApp.logging import setup_database_logging
+LOGGING = setup_database_logging()

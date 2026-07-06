@@ -54,29 +54,31 @@ class PartialPaymentUpdateView(generics.UpdateAPIView):
         except DbContract.DoesNotExist:
             raise NotFound("Contract not found")
 
-        try:
-            partial_payment = DBPartialPyment.objects.get(contract_id=contract_id)
-            new_amount = partial_payment.amount + amount
-        except DBPartialPyment.DoesNotExist:
-            initial_total = float(total) if total is not None else 0.0
-            partial_payment = DBPartialPyment.objects.create(
-                contract=contract,
-                amount=amount,
-                total=initial_total,
-            )
-            resync_contract_payment_status(contract_id)
-            return Response(self.get_serializer(partial_payment).data)
+        # Calculate total paid so far
+        existing_payments = DBPartialPyment.objects.filter(contract_id=contract_id)
+        total_paid = sum(p.amount for p in existing_payments)
 
-        if new_amount > partial_payment.total:
-            remaining = partial_payment.total - partial_payment.amount
+        # Get or set the expected total
+        if total is not None:
+            expected_total = float(total)
+        elif existing_payments.exists():
+            expected_total = existing_payments.first().total
+        else:
+            expected_total = 0.0
+
+        # Validate against expected total
+        if total_paid + amount > expected_total and expected_total > 0:
+            remaining = expected_total - total_paid
             raise ValidationError(
                 f"Payment cannot exceed total. Remaining: {remaining}"
             )
 
-        partial_payment.amount = new_amount
-        if total is not None:
-            partial_payment.total = float(total)
-        partial_payment.save()
+        # Create new payment record
+        partial_payment = DBPartialPyment.objects.create(
+            contract=contract,
+            amount=amount,
+            total=expected_total,
+        )
 
         resync_contract_payment_status(contract_id)
         contract.refresh_from_db()
@@ -88,6 +90,17 @@ class PartialDeleteView(generics.DestroyAPIView):
     queryset = DBPartialPyment.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'contract_id'
+
+    def perform_destroy(self, instance):
+        contract_id = instance.contract_id
+        super().perform_destroy(instance)
+        resync_contract_payment_status(contract_id)
+
+
+class PartialDeleteByIdView(generics.DestroyAPIView):
+    queryset = DBPartialPyment.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
 
     def perform_destroy(self, instance):
         contract_id = instance.contract_id

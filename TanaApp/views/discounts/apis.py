@@ -2,11 +2,11 @@ from rest_framework import generics, permissions
 from rest_framework.exceptions import NotFound
 from TanaApp.models import DbDiscount
 from TanaApp.contract_payment import resync_contract_payment_status
-from .serializers import DiscountSerializer
+from .serializers import DiscountSerializer, DiscountManageSerializer
 
 
 class ContractDiscountsView(generics.ListCreateAPIView):
-    serializer_class = DiscountSerializer
+    serializer_class = DiscountManageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):

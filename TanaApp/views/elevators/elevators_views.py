@@ -6,7 +6,7 @@ from rest_framework import status
 from TanaApp.models import DbElevator, DbWarranty, DbContract, DbBuilding
 from TanaApp.views.elevators.serializers import ElevatorSerializer
 from TanaApp.views.contracts.serializers import ContractCreateSerializer
-from TanaApp.contract_payment import get_payment_status_constraints
+from TanaApp.contract_payment import get_payment_status_constraints, compute_elevator_invoice
 from django.utils.timezone import now, timedelta
 from django.utils import timezone
 from django.urls import reverse
@@ -62,7 +62,9 @@ class ElevatorDetailView(LoginRequiredMixin, View):
         warranties = visible_warranties
 
         contracts = DbContract.objects.filter(
-            building=elevator.building, end_date__gt=now()
+            building=elevator.building,
+            end_date__gt=now(),
+            deleted_at__isnull=True,
         ).prefetch_related('elevators', 'extra', 'discount', 'partial')
 
         # Add computed fields for warranties
@@ -87,6 +89,10 @@ class ElevatorDetailView(LoginRequiredMixin, View):
         # contract_form = ContractCreateSerializer(building)
         contract_form = ContractCreateSerializer(context={'building': elevator.building.id})
         serializer = ElevatorSerializer(elevator)
+        
+        # Calculate elevator total with VAT for display
+        elevator_invoice = compute_elevator_invoice(elevator)
+        elevator_total_with_vat = elevator_invoice['total_with_vat']
         
         # Prepare contract data with attached elevators info
         enhanced_contracts = []
@@ -123,6 +129,7 @@ class ElevatorDetailView(LoginRequiredMixin, View):
             'expired_contracts_count': expired_contracts_count,
             'expired_warranties_count': expired_warranties_count,
             'expiring_soon_count': expiring_soon_count,
+            'elevator_total_with_vat': elevator_total_with_vat,
         }
         return render(request, 'pages/webs/elevators/detail.html', context)
 

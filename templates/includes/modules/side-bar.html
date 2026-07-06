@@ -28,12 +28,93 @@
         <div class="menu">
             <ul class="list">
                 <li class="header">MAIN NAVIGATION</li>
-                <li class="active">
-                    <a href="index.html">
+
+                {# Route-based active highlighting #}
+                {% with _path=request.path|default_if_none:'' %}
+                {% with _is_elevators=_path|slice:":15" == "/elevators/" %}
+                {% with _is_contracts=_path|slice:":11" == "/contracts/" %}
+
+                <li class="{% if _path == '/' %}active{% endif %}">
+                    <a href="{% url 'index' %}">
                         <i class="material-icons">home</i>
                         <span>Home</span>
                     </a>
                 </li>
+
+                <li class="{% if _is_elevators %}active{% endif %}{% if _is_elevators %} open{% endif %}">
+                    <a href="javascript:void(0);" class="menu-toggle">
+                        <i class="material-icons">hardware</i>
+                        <span>Elevators</span>
+                        <span class="menu-badge" style="float:right; margin-left:8px;">
+                            <span class="badge badge-pill badge-info" style="padding:2px 8px; border-radius:999px;">99+</span>
+                        </span>
+                    </a>
+                    <ul class="ml-menu" style="{% if _is_elevators %}display:block;{% endif %}">
+                        <li class="{% if _path == '/elevators/dashboard/' %}active{% endif %}">
+                            <a href="{% url 'elevator-dashboard' %}">
+                                <span>Dashboard</span>
+                                <i class="material-icons" style="font-size:14px; vertical-align:middle; color:#00acc1; margin-left:6px;">trend_up</i>
+                            </a>
+                        </li>
+                        <li class="{% if _path == '/elevators/add/' %}active{% endif %}">
+                            <a href="{% url 'elevator-add' %}">
+                                <span>Add Elevator</span>
+                                <i class="material-icons" style="font-size:14px; vertical-align:middle; color:#ff7043; margin-left:6px;">add_circle</i>
+                            </a>
+                        </li>
+                        <li class="{% if _is_elevators and _path|slice:'-7:' == 'detail/' %}active{% endif %}">
+                            <a href="{% url 'elevator-detail-page' id=0 %}">
+                                <span>Details</span>
+                                <span class="badge badge-pill badge-warning" style="padding:2px 8px; border-radius:999px; margin-left:8px;">Live</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="{% if _is_contracts %}active{% endif %}{% if _is_contracts %} open{% endif %}">
+                    <a href="javascript:void(0);" class="menu-toggle">
+                        <i class="material-icons">assignment</i>
+                        <span>Contracts</span>
+                        <span class="menu-badge" style="float:right; margin-left:8px;">
+                            <span class="badge badge-pill badge-purple" style="padding:2px 8px; border-radius:999px; background:#7e57c2;">5 Active</span>
+                        </span>
+                    </a>
+                    <ul class="ml-menu" style="{% if _is_contracts %}display:block;{% endif %}">
+                        <li class="{% if _path == '/contracts/dashboard/'|yesno:'active,' %}active{% endif %}">
+                            {# dashboards use contract_dashboard/<building_id>/ so we only highlight by prefix #}
+                        </li>
+
+                        <li class="{% if _path|slice:":20" == '/contracts/dashboard/' %}active{% endif %}">
+                            <a href="{% url 'contract-dashboard' building_id=0 %}">
+                                <span>Dashboard</span>
+                                <i class="material-icons" style="font-size:14px; vertical-align:middle; color:#26a69a; margin-left:6px;">verified</i>
+                            </a>
+                        </li>
+
+                        <li class="{% if _is_contracts and _path|slice:'-11:' == 'calculator/' %}active{% endif %}">
+                            <a href="{% url 'contract_calculator' id=0 %}">
+                                <span>Calculator</span>
+                                <span class="badge badge-pill badge-success" style="padding:2px 8px; border-radius:999px; margin-left:8px;">Smart</span>
+                            </a>
+                        </li>
+
+                        <li class="{% if _is_contracts and _path|slice:'-8:' == 'manage/' %}active{% endif %}">
+                            <a href="{% url 'contract-manage' id=0 %}">
+                                <span>Manage</span>
+                                <i class="material-icons" style="font-size:14px; vertical-align:middle; color:#42a5f5; margin-left:6px;">edit</i>
+                            </a>
+                        </li>
+
+                        <li class="{% if _is_contracts and _path|slice:'-7:' == 'delete/' %}active{% endif %}">
+                            <a href="{% url 'contract-soft-delete' id=0 %}">
+                                <span>Delete</span>
+                                <span class="badge badge-pill" style="padding:2px 8px; border-radius:999px; background:#ef5350; color:#fff; margin-left:8px;">Risk</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                {% endwith %}{% endwith %}{% endwith %}
                 <li>
                     <a href="pages/typography.html">
                         <i class="material-icons">text_fields</i>

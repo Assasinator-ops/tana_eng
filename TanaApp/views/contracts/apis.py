@@ -59,8 +59,27 @@ class ContractCalculatorAPIView(APIView):
 
     def get(self, request, id):
         contract = get_object_or_404(DbContract, id=id)
+
+        # Ensure the calculator serializer can render the 1st card (elevators list)
+        # and the 2nd card totals without duplicating VAT/extra/discount.
         serializer = ContractCalculatorSerializer(contract)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Add elevators list payload for the UI.
+        # UI expects: [{id, name, model, Total}]
+        elevators_payload = [
+            {
+                'id': e.id,
+                'name': e.name,
+                'model': e.model,
+                'Total': e.Total,
+            }
+            for e in contract.elevators.all()
+        ]
+
+        data = serializer.data
+        data['elevators'] = elevators_payload
+        return Response(data, status=status.HTTP_200_OK)
+
 
 class ContractRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DbContract.objects.select_related('building').prefetch_related('elevators')
@@ -244,4 +263,25 @@ class ContractUpdateAPIView(APIView):
             serializer.save()
             return redirect('contract-manage', id=contract.id)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ContractAuditTotalsView(APIView):
+    """Run the contract-total auditor synchronously and return its stats.
+
+    Useful for ops dashboards and for testing. Hits every contract in
+    the database, so it is not free — but it is safe to call any time.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from TanaApp.audit import ContractTotalAuditor
+        stats = ContractTotalAuditor.get().run_once(
+            reason_label='Manual audit (API endpoint)',
+        )
+        return Response(stats, status=status.HTTP_200_OK)
+
+    def get(self, request):
+        # Convenience: GET also runs the audit so the URL is easy to bookmark.
+        return self.post(request)
 

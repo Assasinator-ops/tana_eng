@@ -46,7 +46,7 @@
         <div><dt class="text-slate-400">Model</dt><dd class="font-medium text-slate-800">{{ elevator.model }}</dd></div>
         <div><dt class="text-slate-400">Commission</dt><dd class="font-medium text-slate-800 truncate" title="{{ elevator.commissionnumber }}">{{ elevator.commissionnumber }}</dd></div>
         <div><dt class="text-slate-400">Stops</dt><dd class="font-medium text-slate-800">{{ elevator.number_of_stops }}</dd></div>
-        <div><dt class="text-slate-400">Total</dt><dd class="font-semibold text-sky-800">ETB {{ elevator.Total|floatformat:2 }}</dd></div>
+        <div><dt class="text-slate-400">Total</dt><dd class="font-semibold text-sky-800">ETB {{ elevator_total_with_vat|floatformat:2 }}</dd></div>
         <div class="col-span-2"><dt class="text-slate-400">Registered</dt><dd class="text-slate-700">{{ elevator.registerd_date|date:"M j, Y" }}</dd></div>
         <div class="col-span-2"><dt class="text-slate-400">Started</dt><dd class="text-slate-700">{{ elevator.started_date|date:"M j, Y" }}</dd></div>
       </dl>

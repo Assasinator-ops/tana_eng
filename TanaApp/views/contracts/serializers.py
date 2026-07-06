@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from TanaApp.models import DbContract, DbElevator, DbBuilding, DbDiscount, DBPartialPyment, DbExtra, DbTotal
+from TanaApp.models import DbContract, DbElevator, DbBuilding, DBPartialPyment, DbExtra, DbTotal, TotalCorrectionLog
 from django.utils import timezone
 from django.db import transaction
 from datetime import datetime
@@ -10,6 +10,8 @@ from TanaApp.contract_payment import (
     PaymentStatusError,
     validate_payment_status_change,
     get_contract_for_payment_check,
+    compute_contract_totals,
+    recompute_and_persist_contract_total,
 )
 from TanaApp.views.extras.serializers import ExtraSerializer
 from TanaApp.views.discounts.serializers import DiscountSerializer
@@ -49,24 +51,25 @@ class ContractCreateSerializer(serializers.ModelSerializer):
         # compute end_date
         start = validated_data.get('start_date')
         paytime = validated_data.get('paytime', 0)
+        logger.info(f"Contract creation - start_date: {start}, paytime: {paytime}")
         if start:
-            validated_data['end_date'] = start + relativedelta(months=+paytime)
+            validated_data['end_date'] = start + relativedelta(months=paytime)
+            logger.info(f"Contract creation - calculated end_date: {validated_data['end_date']}")
         else:
             from django.utils import timezone
             validated_data['start_date'] = timezone.now()
-            validated_data['end_date'] = timezone.now() + relativedelta(months=+paytime)
+            validated_data['end_date'] = timezone.now() + relativedelta(months=paytime)
+            logger.info(f"Contract creation - calculated end_date (no start): {validated_data['end_date']}")
 
         # create the contract
         contract = super().create(validated_data)
 
-        # attach related records
-        DbDiscount.objects.create(
-            contract=contract,
-            discount_type=1,
-            discount_money=0,
-            description='no elevators attached',
-            carry='0'
-        )
+        # Attach related records.
+        # NOTE: We previously auto-created a placeholder DbDiscount with the
+        # description 'no elevators attached' for every new contract. That row
+        # surfaced in the manage page's discount list and had to be deleted by
+        # hand. We no longer create it — contracts start with zero discounts,
+        # and the UI hides any rows that match the legacy placeholder string.
         DBPartialPyment.objects.create(contract=contract, amount=0, total=0)
 
         # hint for redirect
@@ -75,16 +78,16 @@ class ContractCreateSerializer(serializers.ModelSerializer):
 
 class ContractCalculatorSerializer(serializers.Serializer):
     base_amount = serializers.FloatField()
-    partial_payments = serializers.ListField(child=serializers.DictField())
-    extra_charges = serializers.ListField(child=serializers.DictField())
-    discounts = serializers.ListField(child=serializers.DictField())
     net_total = serializers.FloatField()
     amount_paid = serializers.FloatField()
     balance_due = serializers.FloatField()
 
+    # Used by UI to render the 1st “per elevator” section.
+    # Each item: {id, name, model, Total}
+    elevators = serializers.ListField(child=serializers.DictField())
+
     def to_representation(self, instance):
         contract = instance
-        base_amount = sum(elevator.Total for elevator in contract.elevators.all())
         contract_date = contract.start_date
 
         partial_payments = [
@@ -110,24 +113,19 @@ class ContractCalculatorSerializer(serializers.Serializer):
             for discount in contract.discount.all()
         ]
 
-        total_extra = sum(e['money'] for e in extra_charges)
-        total_discount = sum(d['discount_money'] for d in discounts)
-        # Contract amount due (before payments applied)
-        net_total = base_amount + total_extra - total_discount
-        amount_paid = sum(p['amount'] for p in partial_payments)
-        balance_due = net_total - amount_paid
-
-        try:
-            total_obj = contract.total.first()
-            if total_obj:
-                total_obj.total = net_total
-                total_obj.save()
-            else:
-                DbTotal.objects.create(
-                    contract=contract, total=net_total, is_Actiave=True
-                )
-        except Exception:
-            logger.exception("Failed to persist contract total for contract %s", contract.id)
+        # Use the canonical recompute (quantized to 2 dp, multi-elevator
+        # aware, percent-aware) so calculator output matches what the
+        # background auditor and total-write paths persist.
+        totals = recompute_and_persist_contract_total(
+            contract,
+            reason=TotalCorrectionLog.REASON_MANUAL,
+            detail='Calculator endpoint recomputed the contract total.',
+            notify=True,
+        )
+        base_amount = totals['base_amount']
+        net_total = totals['net_total']
+        amount_paid = totals['amount_paid']
+        balance_due = totals['balance_due']
 
         return {
             'base_amount': base_amount,
@@ -207,7 +205,9 @@ class ContractUpdateSerializer(serializers.ModelSerializer):
         ):
             start = validated_data.get('start_date', instance.start_date)
             paytime = validated_data.get('paytime', instance.paytime)
-            validated_data['end_date'] = start + relativedelta(months=+paytime)
+            logger.info(f"Contract update - start_date: {start}, paytime: {paytime}")
+            validated_data['end_date'] = start + relativedelta(months=paytime)
+            logger.info(f"Contract update - calculated end_date: {validated_data['end_date']}")
 
         return super().update(instance, validated_data)
 
@@ -228,6 +228,7 @@ class ContractManageSerializer(serializers.ModelSerializer):
     extras        = ExtraSerializer(many=True,   read_only=True, source='extra')
     discounts     = DiscountSerializer(many=True, read_only=True, source='discount')
     partial       = serializers.SerializerMethodField()
+    partial_payments = serializers.SerializerMethodField()
     payed_display = serializers.CharField(source='get_payed_display', read_only=True)
 
     class Meta:
@@ -235,7 +236,7 @@ class ContractManageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'start_date', 'end_date',
             'paytime','payed','payed_display',
-            'extras','discounts','partial',
+            'extras','discounts','partial','partial_payments',
         ]
 
     def get_partial(self, obj):
@@ -245,3 +246,8 @@ class ContractManageSerializer(serializers.ModelSerializer):
         if not pp:
             return None
         return PartialPaymentSerializer(pp).data
+
+    def get_partial_payments(self, obj):
+        # Return all partial payment records
+        pp_qs = obj.partial.all()
+        return PartialPaymentSerializer(pp_qs, many=True).data

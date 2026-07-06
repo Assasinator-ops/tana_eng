@@ -2,10 +2,10 @@ from rest_framework import generics, permissions
 from rest_framework.exceptions import NotFound
 from TanaApp.models import DbExtra
 from TanaApp.contract_payment import resync_contract_payment_status
-from .serializers import ExtraSerializer
+from .serializers import ExtraSerializer, ExtraManageSerializer
 
 class ContractExtrasView(generics.ListCreateAPIView):
-    serializer_class = ExtraSerializer
+    serializer_class = ExtraManageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):

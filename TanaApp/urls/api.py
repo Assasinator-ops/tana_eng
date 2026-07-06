@@ -1,14 +1,24 @@
 from django.urls import path
 from TanaApp.views.owners.apis import OwnerListCreateView, OwnerRetrieveUpdateDestroyView, OwnerUpdateView, OwnerSearchView
 from TanaApp.views.buildings.apis import BuildingListCreateView, BuildingRetrieveUpdateDestroyView, BuildingCustomerView, BuildingElevatorView, BuildingContractView, BuildingWarrantyView, BuildingSearchView
-from TanaApp.views.elevators.apis import ElevatorListCreateView, ElevatorRetrieveUpdateDestroyView, ElevatorWarrantyListView, ElevatorCheckView, ElevatorSearchView
+from TanaApp.views.elevators.apis import ElevatorListCreateView, ElevatorRetrieveUpdateDestroyView, ElevatorWarrantyListView, ElevatorCheckView, ElevatorSearchView, ElevatorInvoiceAPIView
+
+from TanaApp.views.elevators.elevator_extras_discounts_api import (
+    ElevatorExtraListCreateView,
+    ElevatorExtraRetrieveUpdateDestroyView,
+    ElevatorDiscountListCreateView,
+    ElevatorDiscountRetrieveUpdateDestroyView,
+)
+
 from TanaApp.views.warranties.apis import WarrantyListCreateView, WarrantyExpiringView, BuildingWarrantyView, ActiveWarrantyView, ExpiredWarrantyView, AlmostExpiredView, VoidWarrantyView
-from TanaApp.views.contracts.apis import ContractListCreateView, ContractRetrieveUpdateView, BuildingContractsView, ContractTotalView, ExpiredContractsView, ContractRegisterView, ContractCreateAttachAPIView, ContractPaymentStatusUpdateView, ContractCalculatorAPIView, ContractUpdateAPIView
+from TanaApp.views.contracts.apis import ContractListCreateView, ContractRetrieveUpdateView, BuildingContractsView, ContractTotalView, ExpiredContractsView, ContractRegisterView, ContractCreateAttachAPIView, ContractPaymentStatusUpdateView, ContractCalculatorAPIView, ContractUpdateAPIView, ContractAuditTotalsView
 from TanaApp.views.discounts.apis import ContractDiscountsView, DiscountRetrieveUpdateView, DiscountDeleteView
 from TanaApp.views.employees.apis import EmployeeListCreateView, EmployeeRetrieveUpdateView, EmployeeRetrieveByEmailView
 from TanaApp.views.expenses.apis import ExpenseListCreateView
 from TanaApp.views.extras.apis import ContractExtrasView, ExtraRetrieveUpdateView, ExtraDeleteView
-from TanaApp.views.partial_payments.apis import PartialPaymentCreateView, PartialPaymentRetrieveView, PartialPaymentUpdateView, PartialDeleteView
+
+
+from TanaApp.views.partial_payments.apis import PartialPaymentCreateView, PartialPaymentRetrieveView, PartialPaymentUpdateView, PartialDeleteView, PartialDeleteByIdView
 from TanaApp.views.timer.apis import TimerListCreateView, TimerRetrieveView, BuildingTimersView
 from TanaApp.views.settings.settings_views import SettingsAPIView
 
@@ -31,7 +41,17 @@ urlpatterns = [
     # elevators urls
     path('elevators/', ElevatorListCreateView.as_view(), name='elevator-list'),
     path('elevators/<str:id>/', ElevatorRetrieveUpdateDestroyView.as_view(), name='elevator-detail'),
+    path('elevators/<str:elevator_id>/invoice/', ElevatorInvoiceAPIView.as_view(), name='elevator-invoice'),
     path('elevators/building/<int:building_id>/', ElevatorWarrantyListView.as_view(), name='elevator-building'),
+
+# elevator extras/discounts urls (scoped)
+
+    path('elevators/<str:elevator_id>/extras/', ElevatorExtraListCreateView.as_view(), name='elevator-extras'),
+    path('elevators/<str:elevator_id>/extras/<int:id>/', ElevatorExtraRetrieveUpdateDestroyView.as_view(), name='elevator-extra-detail'),
+
+    path('elevators/<str:elevator_id>/discounts/', ElevatorDiscountListCreateView.as_view(), name='elevator-discounts'),
+    path('elevators/<str:elevator_id>/discounts/<int:id>/', ElevatorDiscountRetrieveUpdateDestroyView.as_view(), name='elevator-discount-detail'),
+
     path('elevators/check/<int:building_id>/', ElevatorCheckView.as_view(), name='elevator-check'),
     path('elevators/search/', ElevatorSearchView.as_view(), name='elevator-search'),
 
@@ -55,6 +75,7 @@ urlpatterns = [
     path('contracts/update-status/', ContractPaymentStatusUpdateView.as_view(), name="contract-update-payment-status"),
     path('contracts/<int:id>/calculator/', ContractCalculatorAPIView.as_view(), name='contract_calculator_api'),
     path('contracts/<int:contract_id>/update/', ContractUpdateAPIView.as_view(), name='contract-update'),
+    path('contracts/audit-totals/', ContractAuditTotalsView.as_view(), name='contract-audit-totals'),
 
     # discounts urls
     path('discounts/contract/<int:contract_id>/', ContractDiscountsView.as_view(), name='contract-discounts'),
@@ -79,6 +100,7 @@ urlpatterns = [
     path('partial-payments/<int:contract_id>/', PartialPaymentRetrieveView.as_view(), name='partial-detail'),
     path('partial-payments/<int:contract_id>/update/', PartialPaymentUpdateView.as_view(), name='partial-update'),
     path('partial-payments/<int:contract_id>/delete/', PartialDeleteView.as_view(), name='partial-delete'),
+    path('partial-payments/<int:id>/delete-by-id/', PartialDeleteByIdView.as_view(), name='partial-delete-id'),
 
     # timers urls
     path('timers/', TimerListCreateView.as_view(), name='timer-list'),

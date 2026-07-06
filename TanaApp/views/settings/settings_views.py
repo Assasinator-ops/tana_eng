@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.contrib import messages
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +22,10 @@ class SettingsView(View):
 
         personalized_settings, _ = PersonalizedSettings.objects.get_or_create(user=request.user)
         personal_data = PersonalizedSettingsSerializer(personalized_settings).data
+
+        # Apply dark mode from user preference
+        if personal_data.get('dark_mode'):
+            request.session['dark_mode'] = True
 
         return render(request, self.template_name, {
             'global_settings': global_data,
@@ -49,8 +54,10 @@ class SettingsAPIView(APIView):
             if serializer.is_valid():
                 serializer.save()
                 response_data['global'] = serializer.data
+                messages.success(request, 'Global settings updated successfully!')
             else:
                 response_data['global_errors'] = serializer.errors
+                messages.error(request, 'Failed to update global settings. Please check your input.')
                 status_code = status.HTTP_400_BAD_REQUEST
 
         # Handle personal settings
@@ -64,8 +71,10 @@ class SettingsAPIView(APIView):
             if serializer.is_valid():
                 serializer.save()
                 response_data['personal'] = serializer.data
+                messages.success(request, 'Personal settings updated successfully!')
             else:
                 response_data['personal_errors'] = serializer.errors
+                messages.error(request, 'Failed to update personal settings. Please check your input.')
                 status_code = status.HTTP_400_BAD_REQUEST
 
         return Response(response_data, status=status_code)

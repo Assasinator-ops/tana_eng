@@ -2,110 +2,79 @@
 {% load humanize %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-4xl">
+<div class="container mx-auto px-4 py-8 max-w-7xl">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">Contract Price Breakdown</h1>
-        <a href="{% url 'contract-manage' id=contract.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition">
-            Manage Details
-        </a>
+        <h1 class="text-2xl font-bold text-gray-800">Contract Cost Breakdown</h1>
+        <div class="flex gap-3">
+            <button onclick="printContractInvoice()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition shadow-md flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                Export Invoice
+            </button>
+            <a href="{% url 'contract-manage' id=contract.id %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition shadow-md">
+                Manage Details
+            </a>
+        </div>
     </div>
-    
-    {% comment %}<div class="bg-white rounded-xl shadow-md overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Description
-                    </th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
-                    </th>
-                </tr>
-            </thead>
-            <tbody id="price-table" class="bg-white divide-y divide-gray-200">
-                <!-- Data will be populated via JavaScript -->
-            </tbody>
-        </table>
-    </div>{% endcomment %}
+
+    <!-- Section 1: Per-Elevator Price Calculations -->
+    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-200 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-indigo-800 mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            Elevator Price Breakdowns
+        </h2>
+        <div id="elevators-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="flex items-center justify-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <span class="ml-3 text-gray-600">Loading elevator breakdowns...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Total Contract Cost Breakdown -->
+    <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-sm border border-purple-200 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-purple-800 mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            Contract Total Summary
+        </h2>
+        <div id="contract-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="flex items-center justify-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                <span class="ml-3 text-gray-600">Loading contract summary...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Payment Terms & Status -->
+    <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm border border-green-200 p-6">
+        <h2 class="text-lg font-semibold text-green-800 mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+            </svg>
+            Payment Terms & Status
+        </h2>
+        <div id="payment-status" class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span class="ml-3 text-gray-600">Loading payment status...</span>
+        </div>
+    </div>
 </div>
-<div class="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Transaction
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount (ETB)
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Balance
-                    </th>
-                </tr>
-            </thead>
-            <tbody id="payment-details-body" class="bg-white divide-y divide-gray-200">
-                <!-- Loading state -->
-                <tr>
-                    <td colspan="5" class="px-6 py-8 text-center">
-                        <div class="flex justify-center items-center space-x-2">
-                            <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span class="text-gray-600">Loading payment details...</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-            <tfoot class="bg-gray-50">
-                <tr id="net-total-row" class="hidden">
-                    <td></td>
-                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                        NET TOTAL
-                    </td>
-                    <td class="px-6 py-3 text-sm font-bold text-gray-900">
-                        <span id="net-total-amount">ETB 0.00</span>
-                    </td>
-                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                        EXPECTED TRANSACTION
-                    </td>
-                    <td class="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                        <span id="net-owed-amount">ETB 0.00</span>
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Elements
-  const tableBody = document.getElementById('payment-details-body');
-  const netTotalRow = document.getElementById('net-total-row');
-  const netTotalAmount = document.getElementById('net-total-amount');
-  const netOwedAmount = document.getElementById('net-owed-amount');
-  let partial = 0.00;
-
-  if (!tableBody || !netTotalRow || !netTotalAmount || !netOwedAmount) {
-    console.error('Required table elements not found in DOM');
-    return;
-  }
-
-  // Safely interpolate contract ID
   const contractId = "{{ contract.id|default:'' }}";
   if (!contractId) {
-    showErrorState('No contract selected');
+    console.error('No contract ID found');
     return;
   }
 
   const apiUrl = "{% url 'contract_calculator_api' contract.id %}";
 
-  // Utility: format currency in ETB
   const formatCurrency = amount => {
     return new Intl.NumberFormat('en-ET', {
       style: 'currency',
@@ -115,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }).format(amount);
   };
 
-  // Utility: format a date string
   const formatDate = dateStr => {
     if (!dateStr) return 'N/A';
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -123,159 +91,404 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Utility: create a badge span
-  const createBadge = (text, color) => {
-    const palette = {
-      blue: 'bg-blue-100 text-blue-800',
-      yellow: 'bg-yellow-100 text-yellow-800',
-      purple: 'bg-purple-100 text-purple-800',
-      green: 'bg-green-100 text-green-800',
-      red: 'bg-red-100 text-red-800'
-    };
-    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${palette[color] || ''}">${text}</span>`;
-  };
-
-  // Display an error row
-  function showErrorState(message = 'Failed to load payment details') {
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="5" class="px-6 py-8 text-center">
-          <div class="flex flex-col items-center text-red-600">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <p class="mt-2 font-medium">${message}</p>
-            ${!message.includes('selected') ? `
-              <button onclick="window.location.reload()"
-                      class="mt-4 text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd"
-                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                    clip-rule="evenodd" />
-                </svg>Retry
-              </button>
-            ` : ''}
-          </div>
-        </td>
-      </tr>`;
-    netTotalRow.classList.add('hidden');
-  }
-
-  // Append a row to the table
-  function addTableRow({description, type, date, amount, isPositive, balance}) {
-    const tr = document.createElement('tr');
-    tr.className = 'hover:bg-gray-50';
-    tr.innerHTML = `
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${description}</td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${type}</td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${date}</td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}">
-        ${isPositive ? '+' : '-'}${formatCurrency(amount)}
-      </td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-right ${balance >= 0 ? 'text-gray-900' : 'text-red-600'}">
-        ${formatCurrency(balance)}
-      </td>`;
-    tableBody.appendChild(tr);
-  }
-
-  // Fetch & render all payment lines
-  async function fetchPaymentData() {
+  // Fetch elevator invoice data
+  async function fetchElevatorInvoice(elevatorId) {
     try {
-      // loading state
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="5" class="px-6 py-8 text-center">
-            <div class="flex justify-center items-center space-x-2">
-              <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                   viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962
-                         7.962 0 014 12H0c0 3.042 1.135 5.824
-                         3 7.938l3-2.647z"></path>
-              </svg>
-              <span class="text-gray-600">Loading payment details...</span>
-            </div>
-          </td>
-        </tr>`;
-
-      const resp = await fetch(apiUrl);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-      const data = await resp.json();
-      tableBody.innerHTML = '';
-
-      let runningBalance = data.base_amount;
-
-      // Base contract
-      addTableRow({
-        description: 'Base Contract Value',
-        type: createBadge('Base', 'blue'),
-        date: formatDate(data.start_date),
-        amount: data.base_amount,
-        isPositive: true,
-        balance: runningBalance
+      const resp = await fetch(`/api/elevators/${elevatorId}/invoice/`, {
+        credentials: 'same-origin'
       });
-
-      // Extras
-      (data.extra_charges || []).forEach((e) => {
-        runningBalance += e.money;
-        addTableRow({
-          description: `Extra: ${e.description}`,
-          type: createBadge('Extra', 'purple'),
-          date: formatDate(e.date),
-          amount: e.money,
-          isPositive: true,
-          balance: runningBalance
-        });
-      });
-
-      // Discounts
-      (data.discounts || []).forEach((d) => {
-        runningBalance -= d.discount_money;
-        addTableRow({
-          description: `Discount: ${d.description}`,
-          type: createBadge('Discount', 'green'),
-          date: formatDate(d.date),
-          amount: d.discount_money,
-          isPositive: false,
-          balance: runningBalance
-        });
-      });
-
-      // Contract total (base + extras − discounts)
-      const contractTotal = data.net_total;
-      partial = data.amount_paid ?? 0;
-
-      // Partial payments (reduce remaining balance)
-      (data.partial_payments || []).forEach((p, i) => {
-        runningBalance -= p.amount;
-        addTableRow({
-          description: `Partial Payment #${i+1}`,
-          type: createBadge('Payment', 'yellow'),
-          date: formatDate(p.date),
-          amount: p.amount,
-          isPositive: false,
-          balance: runningBalance
-        });
-      });
-
-      // Show net total and remaining balance
-      netTotalAmount.textContent = formatCurrency(contractTotal);
-      const owed = data.balance_due ?? (contractTotal - partial);
-      netOwedAmount.textContent = formatCurrency(owed);
-      netOwedAmount.className = owed >= 0 ? 'text-green-500' : 'text-red-500';
-      netTotalRow.classList.remove('hidden');
-
+      if (!resp.ok) return null;
+      return await resp.json();
     } catch (err) {
-      console.error('fetchPaymentData error', err);
-      showErrorState('Error loading contract details. Please try again.');
+      console.error('Error fetching elevator invoice:', err);
+      return null;
     }
   }
 
-  // Kick it off
-  fetchPaymentData();
+  // Render elevator card (must be ergonomic + modern)
+  function renderElevatorCard(elevator, invoiceData) {
+    const fmt = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const name = invoiceData?.elevator?.name || elevator?.name || 'Elevator';
+    const model = invoiceData?.elevator?.model || elevator?.model || 'N/A';
+
+    if (!invoiceData) {
+      return `
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="font-semibold text-gray-900">${name}</h3>
+              <p class="text-xs text-gray-500 mt-0.5">${model}</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-600/20">
+              Missing Invoice
+            </span>
+          </div>
+          <p class="text-sm text-gray-600 mt-3">Unable to load invoice breakdown right now.</p>
+        </div>
+      `;
+    }
+
+
+    return `
+      <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-gray-800">${invoiceData.elevator.name}</h3>
+          <span class="text-xs text-gray-500">${invoiceData.elevator.model || 'N/A'}</span>
+        </div>
+        
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Base Total</span>
+            <span class="font-medium">ETB ${fmt(invoiceData.base_total)}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Extras</span>
+            <span class="font-medium">ETB ${fmt(invoiceData.extras_total)}</span>
+          </div>
+          <div class="flex justify-between font-semibold border-t border-gray-200 pt-2">
+            <span>Subtotal</span>
+            <span>ETB ${fmt(invoiceData.subtotal)}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">VAT (15%)</span>
+            <span class="font-medium">ETB ${fmt(invoiceData.vat_amount)}</span>
+          </div>
+          <div class="flex justify-between font-bold text-indigo-600 border-t border-gray-200 pt-2">
+            <span>Total with VAT</span>
+            <span>ETB ${fmt(invoiceData.total_with_vat)}</span>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-gray-200">
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-indigo-50 rounded p-2">
+              <p class="text-xs text-gray-500">Monthly</p>
+              <p class="text-sm font-bold text-indigo-600">ETB ${fmt(invoiceData.monthly)}</p>
+            </div>
+            <div class="bg-indigo-50 rounded p-2">
+              <p class="text-xs text-gray-500">Quarterly</p>
+              <p class="text-sm font-bold text-indigo-600">ETB ${fmt(invoiceData.quarterly)}</p>
+            </div>
+            <div class="bg-indigo-50 rounded p-2">
+              <p class="text-xs text-gray-500">Annual</p>
+              <p class="text-sm font-bold text-indigo-600">ETB ${fmt(invoiceData.annual)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 space-y-2">
+          <div class="flex justify-between items-center bg-green-50 rounded p-2 text-sm">
+            <div>
+              <p class="font-medium text-gray-800">Semi-Annual (1% off)</p>
+              <p class="text-xs text-gray-500">Save: ETB ${fmt(invoiceData.semi_annual_discount)}</p>
+            </div>
+            <p class="font-bold text-green-600">ETB ${fmt(invoiceData.semi_annual_total)}</p>
+          </div>
+          <div class="flex justify-between items-center bg-green-50 rounded p-2 text-sm">
+            <div>
+              <p class="font-medium text-gray-800">Annual (3% off)</p>
+              <p class="text-xs text-gray-500">Save: ETB ${fmt(invoiceData.annual_discount)}</p>
+            </div>
+            <p class="font-bold text-green-600">ETB ${fmt(invoiceData.annual_total)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Render contract summary
+  function renderContractSummary(data) {
+    const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    return `
+      <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <h3 class="font-semibold text-gray-800 mb-3">Base Amount</h3>
+        <p class="text-2xl font-bold text-purple-600">ETB ${fmt(data.base_amount)}</p>
+        <p class="text-xs text-gray-500 mt-1">Sum of all elevator totals (before VAT)</p>
+      </div>
+      ${data.net_total_before_vat !== undefined ? `
+      <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <h3 class="font-semibold text-gray-800 mb-3">Net Total (Before VAT)</h3>
+        <p class="text-2xl font-bold text-purple-600">ETB ${fmt(data.net_total_before_vat)}</p>
+        <p class="text-xs text-gray-500 mt-1">After extras & discounts</p>
+      </div>
+      <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <h3 class="font-semibold text-gray-800 mb-3">VAT (${(data.vat_rate * 100).toFixed(0)}%)</h3>
+        <p class="text-2xl font-bold text-purple-600">ETB ${fmt(data.vat_amount)}</p>
+        <p class="text-xs text-gray-500 mt-1">Tax amount</p>
+      </div>
+      ` : ''}
+      <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <h3 class="font-semibold text-gray-800 mb-3">Net Total (With VAT)</h3>
+        <p class="text-2xl font-bold text-purple-600">ETB ${fmt(data.net_total)}</p>
+        <p class="text-xs text-gray-500 mt-1">Final total after VAT</p>
+      </div>
+      <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <h3 class="font-semibold text-gray-800 mb-3">Balance Due</h3>
+        <p class="text-2xl font-bold ${data.balance_due > 0 ? 'text-orange-600' : 'text-green-600'}">ETB ${fmt(data.balance_due)}</p>
+        <p class="text-xs text-gray-500 mt-1">Remaining to be paid</p>
+      </div>
+    `;
+  }
+
+  // Render payment status toast
+  function renderPaymentStatus(data) {
+    const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const balanceDue = data.balance_due;
+    const amountPaid = data.amount_paid;
+    const netTotal = data.net_total;
+
+    let bgColor, iconSvg, title, message, actionButton;
+
+    if (balanceDue <= 0.01) {
+      // Fully paid
+      bgColor = 'bg-green-100 border-green-300';
+      iconSvg = `<svg class="w-10 h-10 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+      title = 'Fully Paid';
+      message = `Customer has paid ETB ${fmt(amountPaid)} of ETB ${fmt(netTotal)}. No balance remaining.`;
+    } else if (amountPaid > 0) {
+      // Partially paid
+      bgColor = 'bg-yellow-100 border-yellow-300';
+      iconSvg = `<svg class="w-10 h-10 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+      title = 'Partially Paid';
+      message = `Customer has paid ETB ${fmt(amountPaid)}. Remaining balance: ETB ${fmt(balanceDue)}`;
+      actionButton = `<a href="{% url 'contract-manage' id=contract.id %}" class="mt-3 inline-block bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow">Manage Payment</a>`;
+    } else {
+      // Not paid
+      bgColor = 'bg-red-100 border-red-300';
+      iconSvg = `<svg class="w-10 h-10 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+      title = 'Not Paid';
+      message = `Customer has not paid at all. Total due: ETB ${fmt(netTotal)}`;
+      actionButton = `<a href="{% url 'contract-manage' id=contract.id %}" class="mt-3 inline-block bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow">Manage Payment</a>`;
+    }
+
+    return `
+      <div class="${bgColor} border rounded-lg p-6 max-w-2xl mx-auto">
+        <div class="flex items-start">
+          ${iconSvg}
+          <div class="flex-1">
+            <h3 class="text-xl font-bold ${balanceDue <= 0.01 ? 'text-green-800' : amountPaid > 0 ? 'text-yellow-800' : 'text-red-800'}">${title}</h3>
+            <p class="text-gray-700 mt-2">${message}</p>
+            ${actionButton || ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+      // Main fetch function
+  async function fetchAllData() {
+    try {
+      const resp = await fetch(apiUrl, { credentials: 'same-origin' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      const data = await resp.json();
+
+      // Render contract summary (precomputed by API)
+      document.getElementById('contract-summary').innerHTML = renderContractSummary(data);
+
+      // Render payment status toast/card (color-coded)
+      document.getElementById('payment-status').innerHTML = renderPaymentStatus(data);
+
+      // Render elevator cards (must list attached elevators)
+      const elevatorsContainer = document.getElementById('elevators-container');
+      const elevators = data.elevators || [];
+
+      if (elevators.length === 0) {
+        elevatorsContainer.innerHTML = `
+          <div class="col-span-2 text-center py-8 text-gray-500">
+            <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <p>No elevators attached to this contract.</p>
+          </div>
+        `;
+        return;
+      }
+
+      elevatorsContainer.innerHTML = `
+        <div class="col-span-2 text-center py-8 text-gray-600">
+          <svg class="w-10 h-10 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <p>Loading each elevator invoice…</p>
+        </div>
+      `;
+
+      const elevatorCards = await Promise.all(
+        elevators.map(async (elevator) => {
+          const invoiceData = await fetchElevatorInvoice(elevator.id);
+          return renderElevatorCard(elevator, invoiceData);
+        })
+      );
+
+      elevatorsContainer.innerHTML = elevatorCards.join('');
+      
+      // Store data for export
+      window.contractData = data;
+      window.elevatorInvoices = await Promise.all(
+        elevators.map(async (elevator) => {
+          const invoiceData = await fetchElevatorInvoice(elevator.id);
+          return { elevator, invoiceData };
+        })
+      );
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      document.getElementById('elevators-container').innerHTML = `
+        <div class="col-span-2 text-center py-8 text-red-500">
+          <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          <p>Error loading contract breakdown. Please try again.</p>
+        </div>
+      `;
+    }
+  }
+
+  async function printContractInvoice() {
+    if (!window.contractData || !window.elevatorInvoices) {
+      alert('Please wait for data to load before exporting.');
+      return;
+    }
+    
+    const data = window.contractData;
+    const invoices = window.elevatorInvoices;
+    const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    const elevatorCardsHtml = invoices.map(({ elevator, invoiceData }) => {
+      if (!invoiceData) return '';
+      return `
+        <div class="invoice-section" style="page-break-inside: avoid;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0 0 15px 0; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+            ${invoiceData.elevator.name} (${invoiceData.elevator.model || 'N/A'})
+          </h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px;">
+                <span style="color: #6b7280;">Base Total</span>
+                <span>ETB ${fmt(invoiceData.base_total)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px;">
+                <span style="color: #6b7280;">VAT (15%)</span>
+                <span>ETB ${fmt(invoiceData.vat_amount)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px;">
+                <span style="color: #6b7280;">Base with VAT</span>
+                <span>ETB ${fmt(invoiceData.base_total_with_vat)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px;">
+                <span style="color: #6b7280;">Extras</span>
+                <span style="color: #059669;">ETB ${fmt(invoiceData.extras_total)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px;">
+                <span style="color: #6b7280;">Discounts</span>
+                <span style="color: #dc2626;">ETB ${fmt(invoiceData.discounts_total || 0)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 10px 0; padding-top: 10px; border-top: 2px solid #e5e7eb; font-weight: 700; font-size: 15px;">
+                <span style="color: #4f46e5;">Total (Monthly)</span>
+                <span style="color: #4f46e5;">ETB ${fmt(invoiceData.total_with_vat)}</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 10px;">Payment Terms</div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <div style="background: white; border-radius: 4px; padding: 8px; text-align: center; border: 1px solid #e5e7eb;">
+                  <div style="font-size: 10px; text-transform: uppercase; color: #6b7280;">Monthly</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #4f46e5;">ETB ${fmt(invoiceData.monthly)}</div>
+                </div>
+                <div style="background: white; border-radius: 4px; padding: 8px; text-align: center; border: 1px solid #e5e7eb;">
+                  <div style="font-size: 10px; text-transform: uppercase; color: #6b7280;">Quarterly</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #4f46e5;">ETB ${fmt(invoiceData.quarterly)}</div>
+                </div>
+                <div style="background: white; border-radius: 4px; padding: 8px; text-align: center; border: 1px solid #e5e7eb;">
+                  <div style="font-size: 10px; text-transform: uppercase; color: #6b7280;">Annual</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #4f46e5;">ETB ${fmt(invoiceData.annual)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>Contract Invoice - {{ contract.id }}</title>
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1f2937; background: white; }
+          .invoice-header { border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px; }
+          .invoice-title { font-size: 28px; font-weight: 700; color: #1f2937; margin: 0; }
+          .invoice-subtitle { font-size: 14px; color: #6b7280; margin-top: 5px; }
+          .invoice-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+          .meta-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin: 0 0 10px 0; }
+          .meta-section p { margin: 5px 0; font-size: 14px; }
+          .invoice-section { background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+          .contract-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+          .summary-card { background: #f9fafb; border-radius: 8px; padding: 15px; text-align: center; border: 1px solid #e5e7eb; }
+          .summary-label { font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 5px; }
+          .summary-value { font-size: 20px; font-weight: 700; color: #4f46e5; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #9ca3af; }
+          @media print { body { padding: 20px; } .invoice-section { page-break-inside: avoid; } }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-header">
+          <h1 class="invoice-title">CONTRACT INVOICE</h1>
+          <p class="invoice-subtitle">Contract #{{ contract.id }} - Elevator Service Invoice</p>
+          <div class="invoice-meta">
+            <div class="meta-section">
+              <h3>Contract Details</h3>
+              <p><strong>Contract ID:</strong> {{ contract.id }}</p>
+              <p><strong>Building:</strong> {{ contract.building.name }}</p>
+              <p><strong>Duration:</strong> {{ contract.paytime }} months</p>
+              <p><strong>Start Date:</strong> {{ contract.start_date|date:"M j, Y" }}</p>
+              <p><strong>End Date:</strong> {{ contract.end_date|date:"M j, Y" }}</p>
+            </div>
+            <div class="meta-section">
+              <h3>Building Details</h3>
+              <p><strong>Address:</strong> {{ contract.building.address }}</p>
+              <p><strong>Phone:</strong> {{ contract.building.phone1 }}</p>
+              <p><strong>Email:</strong> {{ contract.building.email1 }}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="contract-summary">
+          <div class="summary-card">
+            <div class="summary-label">Base Amount</div>
+            <div class="summary-value">ETB ${fmt(data.base_amount)}</div>
+          </div>
+          ${data.net_total_before_vat !== undefined ? `
+          <div class="summary-card">
+            <div class="summary-label">Net Before VAT</div>
+            <div class="summary-value">ETB ${fmt(data.net_total_before_vat)}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">VAT (15%)</div>
+            <div class="summary-value">ETB ${fmt(data.vat_amount)}</div>
+          </div>
+          ` : ''}
+          <div class="summary-card">
+            <div class="summary-label">Net Total</div>
+            <div class="summary-value">ETB ${fmt(data.net_total)}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Balance Due</div>
+            <div class="summary-value" style="color: ${data.balance_due > 0 ? '#dc2626' : '#16a34a'};">ETB ${fmt(data.balance_due)}</div>
+          </div>
+        </div>
+        
+        <h2 style="font-size: 20px; font-weight: 700; color: #1f2937; margin-bottom: 20px;">Elevator Invoices</h2>
+        ${elevatorCardsHtml}
+        
+        <div class="footer">
+          <p>Contract invoice generated on ${new Date().toLocaleDateString()} | Tana Elevator Management System</p>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  }
+
+  fetchAllData();
 });
 </script>
 {% endblock %}
